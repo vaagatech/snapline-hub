@@ -9,7 +9,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <a class="brand" href="index.html">Snapline Hub</a>
+      <a class="brand hub" href="index.html">Snapline Hub</a>
       <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
       <nav class="nav">
         <div class="nav-section">Documentation</div>
@@ -45,8 +45,9 @@
         </thead>
         <tbody>
           <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Health check and report count</td></tr>
-          <tr><td><code>GET</code></td><td><code>/api/stats</code></td><td>Dashboard aggregate statistics</td></tr>
-          <tr><td><code>GET</code></td><td><code>/api/reports</code></td><td>List report summaries (paginated)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/stats</code></td><td>Dashboard aggregate statistics (supports filters)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/facets</code></td><td>Filter dropdown values (projects, tags, frameworks)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/reports</code></td><td>List report summaries (filterable, paginated)</td></tr>
           <tr><td><code>GET</code></td><td><code>/api/reports/:id</code></td><td>Get full stored report</td></tr>
           <tr><td><code>POST</code></td><td><code>/api/reports</code></td><td>Ingest a <code>TestRunReport</code></td></tr>
           <tr><td><code>DELETE</code></td><td><code>/api/reports/:id</code></td><td>Delete a report</td></tr>
@@ -80,19 +81,49 @@
   "totalFailed": 5,
   "passRate": 89,
   "frameworks": ["@vaagatech/snapline-engine", "snapline-engine"],
+  "projects": [{ "value": "snapline-demo", "count": 2 }],
+  "tags": [{ "value": "node", "count": 1 }, { "value": "python", "count": 1 }],
   "recentRuns": [ /* ReportSummary[] — up to 5 */ ]
+}</code></pre>
+
+      <h2>GET /api/facets</h2>
+      <p>Returns distinct projects, tags, and frameworks with counts for populating filter UI.</p>
+      <h3>Query parameters</h3>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Param</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>project</code></td><td>Scope facets to a project</td></tr>
+          <tr><td><code>from</code> / <code>to</code></td><td>ISO date range</td></tr>
+        </tbody>
+      </table>
+      </div>
+      <h3>Response <code>200</code></h3>
+      <pre><code>{
+  "projects": [{ "value": "snapline-demo", "count": 2 }],
+  "tags": [{ "value": "node", "count": 1 }],
+  "frameworks": [{ "value": "snapline-engine", "count": 2 }]
 }</code></pre>
 
       <h2>GET /api/reports</h2>
       <p>List stored report summaries, newest first.</p>
       <h3>Query parameters</h3>
+      <div class="table-wrap">
       <table>
-        <thead><tr><th>Param</th><th>Default</th><th>Max</th><th>Description</th></tr></thead>
+        <thead><tr><th>Param</th><th>Description</th></tr></thead>
         <tbody>
-          <tr><td><code>limit</code></td><td>50</td><td>200</td><td>Page size</td></tr>
-          <tr><td><code>offset</code></td><td>0</td><td>—</td><td>Skip N reports</td></tr>
+          <tr><td><code>project</code></td><td>Filter by project name</td></tr>
+          <tr><td><code>tags</code></td><td>Comma-separated tags (OR by default)</td></tr>
+          <tr><td><code>tagMode</code></td><td><code>all</code> for AND when multiple tags</td></tr>
+          <tr><td><code>framework</code></td><td>Filter by framework string</td></tr>
+          <tr><td><code>status</code></td><td><code>passed</code> or <code>failed</code></td></tr>
+          <tr><td><code>from</code> / <code>to</code></td><td>ISO date range on <code>generatedAt</code></td></tr>
+          <tr><td><code>search</code></td><td>Search label, project, framework, tags</td></tr>
+          <tr><td><code>limit</code></td><td>Page size (default 50, max 200)</td></tr>
+          <tr><td><code>offset</code></td><td>Skip N reports</td></tr>
         </tbody>
       </table>
+      </div>
       <h3>Response <code>200</code></h3>
       <pre><code>{
   "total": 100,
@@ -104,6 +135,8 @@
       "generatedAt": "2026-07-07T10:00:00.000Z",
       "framework": "@vaagatech/snapline-engine",
       "label": "CI build #42",
+      "project": "snapline-demo",
+      "tags": ["node", "demo"],
       "total": 3,
       "passed": 2,
       "failed": 1,
@@ -141,9 +174,21 @@
       <p>Ingest a <code>TestRunReport</code>. This is the endpoint used by <code>pushTestReportToHub</code>.</p>
 
       <h3>Request body</h3>
-      <p>A <code>TestRunReport</code> object. An optional top-level <code>label</code> string sets the display name in the UI (stripped before storage).</p>
+      <p>A <code>TestRunReport</code> object plus optional metadata:</p>
+      <div class="table-wrap">
+      <table>
+        <thead><tr><th>Field</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>label</code></td><td>Display name in the UI</td></tr>
+          <tr><td><code>project</code></td><td>Logical grouping (e.g. <code>snapline-demo</code>, <code>my-app</code>)</td></tr>
+          <tr><td><code>tags</code></td><td>Array or comma-separated string (e.g. <code>node</code>, <code>ci</code>)</td></tr>
+        </tbody>
+      </table>
+      </div>
       <pre><code>{
-  "label": "Optional display name",
+  "label": "CI build #42",
+  "project": "snapline-demo",
+  "tags": ["node", "demo"],
   "generatedAt": "2026-07-07T10:00:00.000Z",
   "framework": "@vaagatech/snapline-engine",
   "summary": {

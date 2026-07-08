@@ -9,7 +9,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <a class="brand" href="index.html">Snapline Hub</a>
+      <a class="brand hub" href="index.html">Snapline Hub</a>
       <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
       <nav class="nav">
         <div class="nav-section">Documentation</div>
@@ -39,67 +39,80 @@
       </header>
 
       <h2>Navigation</h2>
-      <p>The sidebar has three main sections:</p>
+      <p>The sidebar is organized into clear sections:</p>
+      <div class="table-wrap">
       <table>
         <thead>
-          <tr><th>Page</th><th>URL path</th><th>Purpose</th></tr>
+          <tr><th>Page</th><th>Path</th><th>Purpose</th></tr>
         </thead>
         <tbody>
-          <tr><td><strong>Dashboard</strong></td><td><code>/</code></td><td>Overview stats and recent runs</td></tr>
-          <tr><td><strong>All Runs</strong></td><td><code>/reports</code></td><td>Full history with pass/fail filters</td></tr>
-          <tr><td><strong>Upload Report</strong></td><td><code>/upload</code></td><td>Import JSON files manually</td></tr>
-          <tr><td><strong>Run Detail</strong></td><td><code>/reports/:id</code></td><td>Single run drill-down</td></tr>
+          <tr><td><strong>Dashboard</strong></td><td><code>/</code></td><td>Pass rate, recent runs, projects and tags overview</td></tr>
+          <tr><td><strong>Test runs</strong></td><td><code>/reports</code></td><td>Full history with search, quick filters, and advanced filters</td></tr>
+          <tr><td><strong>Import report</strong></td><td><code>/upload</code></td><td>Upload JSON manually with optional project and tags</td></tr>
+          <tr><td><strong>Run detail</strong></td><td><code>/reports/:id</code></td><td>Suite drill-down, step results, and diff viewer</td></tr>
         </tbody>
       </table>
+      </div>
 
       <h2>Dashboard</h2>
-      <p>The dashboard is the home page. It shows aggregate metrics across <em>all</em> stored reports:</p>
+      <p>The dashboard shows aggregate metrics across all stored reports:</p>
       <ul>
-        <li><strong>Total Runs</strong> — number of ingested <code>TestRunReport</code> documents</li>
-        <li><strong>Suites Executed</strong> — sum of <code>summary.total</code> across all runs</li>
-        <li><strong>Passed / Failed</strong> — suite-level pass and fail counts</li>
-        <li><strong>Pass Rate</strong> — percentage of suites that passed</li>
+        <li><strong>Total runs</strong> — ingested <code>TestRunReport</code> documents</li>
+        <li><strong>Suites executed</strong> — sum of suite counts across runs</li>
+        <li><strong>Passed / failed</strong> — suite-level outcomes</li>
+        <li><strong>Pass rate</strong> — percentage of suites that passed</li>
       </ul>
-      <p>The <strong>Recent Runs</strong> table lists the five most recent reports with:</p>
-      <ul>
-        <li>Run label (or truncated ID if no label)</li>
-        <li>Framework identifier (<code>@vaagatech/snapline-engine</code> or <code>snapline-engine</code>)</li>
-        <li>Suite count, pass/fail badge, duration, timestamp</li>
-      </ul>
-      <p>Click any run name to open its detail page. Use <strong>View all</strong> to go to the full run history.</p>
+      <p>The <strong>Projects &amp; tags</strong> section lists groupings from pushed metadata. Click any chip to open the test runs page with that filter applied.</p>
+      <p><strong>Recent runs</strong> shows the latest reports with project, tags, framework, and result badges. Use <strong>View all</strong> for the full filterable list.</p>
 
-      <h2>All Runs</h2>
-      <p>The run history page lists every stored report, newest first.</p>
+      <h2>Test runs — search and filters</h2>
+      <p>The test runs page is designed for finding specific reports quickly without bias toward any single filter.</p>
 
-      <h3>Filtering</h3>
-      <p>Three filter tabs at the top:</p>
+      <h3>Search bar</h3>
+      <p>Search across label, project, framework, and tags. Input is debounced (300ms) so typing does not trigger excessive API calls.</p>
+
+      <h3>Quick filters</h3>
+      <p>One-click presets at the top:</p>
+      <div class="table-wrap">
       <table>
-        <thead>
-          <tr><th>Filter</th><th>Shows</th></tr>
-        </thead>
+        <thead><tr><th>Preset</th><th>Effect</th></tr></thead>
         <tbody>
-          <tr><td><strong>All</strong></td><td>Every stored run</td></tr>
-          <tr><td><strong>Passed</strong></td><td>Runs where <code>summary.failed === 0</code> (all suites passed)</td></tr>
-          <tr><td><strong>Failed</strong></td><td>Runs with at least one failed suite</td></tr>
+          <tr><td>All runs</td><td>Clear filters</td></tr>
+          <tr><td>Node.js</td><td>Tag filter: <code>node</code></td></tr>
+          <tr><td>Python</td><td>Tag filter: <code>python</code></td></tr>
+          <tr><td>Failed only</td><td>Runs with at least one failed suite</td></tr>
+          <tr><td>Last 7 / 30 days</td><td>Date range from today backward</td></tr>
         </tbody>
       </table>
+      </div>
+
+      <h3>Active filter chips</h3>
+      <p>When filters are applied, chips appear below the search bar showing exactly what is active. Click a chip to remove that filter, or use <strong>Clear all</strong>.</p>
+
+      <h3>Advanced filters</h3>
+      <p>Expand <strong>Advanced filters</strong> for project, framework, status, date range, and tag selection. When multiple tags are selected, choose:</p>
+      <ul>
+        <li><strong>Match any</strong> — runs with at least one selected tag (OR)</li>
+        <li><strong>Match all</strong> — runs that have every selected tag (AND)</li>
+      </ul>
 
       <h3>Columns</h3>
+      <div class="table-wrap">
       <table>
-        <thead>
-          <tr><th>Column</th><th>Source</th></tr>
-        </thead>
+        <thead><tr><th>Column</th><th>Source</th></tr></thead>
         <tbody>
-          <tr><td>Run</td><td><code>label</code> from push/upload, or <code>Run {id-prefix}</code></td></tr>
+          <tr><td>Run</td><td><code>label</code> or truncated ID</td></tr>
+          <tr><td>Project</td><td><code>project</code> metadata from push/upload</td></tr>
+          <tr><td>Tags</td><td><code>tags[]</code> — click a tag to filter</td></tr>
           <tr><td>Framework</td><td><code>report.framework</code></td></tr>
-          <tr><td>Suites</td><td><code>summary.total</code></td></tr>
-          <tr><td>Passed / Failed</td><td><code>summary.passed</code> / <code>summary.failed</code></td></tr>
-          <tr><td>Date</td><td><code>generatedAt</code> (ISO timestamp)</td></tr>
+          <tr><td>Passed / failed</td><td><code>summary.passed</code> / <code>summary.failed</code></td></tr>
+          <tr><td>Date</td><td><code>generatedAt</code></td></tr>
         </tbody>
       </table>
+      </div>
 
-      <h2>Upload Report</h2>
-      <p>Use this page when you have an existing Snapline JSON report file and do not want to push programmatically.</p>
+      <h2>Import report</h2>
+      <p>Upload a <code>TestRunReport</code> JSON file when you are not pushing programmatically. Optionally set <strong>project</strong> and <strong>tags</strong> before upload — they are stored as searchable metadata.</p>
 
       <h3>Accepted format</h3>
       <p>The file must be a valid <code>TestRunReport</code> JSON object. Minimum required fields:</p>

@@ -15,10 +15,44 @@ export interface ReportDatabase {
   insertReport(report: TestRunReport, meta?: ReportIngestMeta): string;
   listReports(filters?: ReportFilters): ReportSummary[];
   countReports(filters?: ReportFilters): number;
+  aggregateStats(filters?: ReportFilters): {
+    totalSuites: number;
+    totalPassed: number;
+    totalFailed: number;
+  };
   getReport(id: string): StoredReport | undefined;
   deleteReport(id: string): boolean;
   getFacets(filters?: Pick<ReportFilters, 'project' | 'from' | 'to'>): ReportFacets;
   close(): void;
+}
+
+const MAX_SUITES = 500;
+const MAX_STEPS_PER_SUITE = 1000;
+const MAX_META_STRING = 256;
+const MAX_TAGS = 32;
+
+function safeJsonParse<T>(raw: string, fallback: T): T {
+  try {
+    return JSON.parse(raw) as T;
+  } catch {
+    return fallback;
+  }
+}
+
+function normalizePagination(limit?: number, offset?: number): { limit: number; offset: number } {
+  const parsedLimit = Number(limit);
+  const parsedOffset = Number(offset);
+  return {
+    limit: Number.isFinite(parsedLimit) ? Math.min(Math.max(1, Math.floor(parsedLimit)), 200) : 50,
+    offset: Number.isFinite(parsedOffset) ? Math.max(0, Math.floor(parsedOffset)) : 0,
+  };
+}
+
+function summaryFromSuites(report: TestRunReport): { total: number; passed: number; failed: number } {
+  const total = report.suites.length;
+  const passed = report.suites.filter((s) => s.passed).length;
+  const failed = total - passed;
+  return { total, passed, failed };
 }
 
 interface ReportRow {
@@ -64,13 +98,14 @@ function rowToSummary(row: ReportRow): ReportSummary {
     passed: row.passed,
     failed: row.failed,
     durationMs: row.duration_ms ?? undefined,
-    environment: row.environment ? JSON.parse(row.environment) : undefined,
+    environment: row.environment ? safeJsonParse(row.environment, undefined) : undefined,
     createdAt: row.created_at,
   };
 }
 
-function rowToStored(row: ReportRow): StoredReport {
-  const report = JSON.parse(row.report_json) as TestRunReport;
+function rowToStored(row: ReportRow): StoredReport | undefined {
+  const report = safeJsonParse<TestRunReport | null>(row.report_json, null);
+  if (!report) return undefined;
   return { ...rowToSummary(row), report };
 }
 
@@ -185,6 +220,7 @@ export function createDatabase(dbPath: string): ReportDatabase {
     insertReport(report, meta = {}) {
       const id = crypto.randomUUID();
       const tags = normalizeTags(meta.tags);
+      const suiteSummary = summaryFromSuites(report);
       insertStmt.run({
         id,
         generatedAt: report.generatedAt,
@@ -192,9 +228,9 @@ export function createDatabase(dbPath: string): ReportDatabase {
         label: meta.label ?? null,
         project: meta.project ?? null,
         tags: tags.length ? JSON.stringify(tags) : null,
-        total: report.summary.total,
-        passed: report.summary.passed,
-        failed: report.summary.failed,
+        total: suiteSummary.total,
+        passed: suiteSummary.passed,
+        failed: suiteSummary.failed,
         durationMs: report.summary.durationMs ?? null,
         environment: report.environment ? JSON.stringify(report.environment) : null,
         reportJson: JSON.stringify(report),
@@ -203,8 +239,7 @@ export function createDatabase(dbPath: string): ReportDatabase {
     },
 
     listReports(filters = {}) {
-      const limit = Math.min(filters.limit ?? 50, 200);
-      const offset = filters.offset ?? 0;
+      const { limit, offset } = normalizePagination(filters.limit, filters.offset);
       const { sql, params } = buildWhereClause(filters);
       const stmt = db.prepare(`
         SELECT * FROM reports
@@ -221,6 +256,23 @@ export function createDatabase(dbPath: string): ReportDatabase {
       const stmt = db.prepare(`SELECT COUNT(*) as count FROM reports ${sql}`);
       const row = stmt.get(params) as { count: number };
       return row.count;
+    },
+
+    aggregateStats(filters = {}) {
+      const { sql, params } = buildWhereClause(filters);
+      const stmt = db.prepare(`
+        SELECT
+          COALESCE(SUM(total), 0) as totalSuites,
+          COALESCE(SUM(passed), 0) as totalPassed,
+          COALESCE(SUM(failed), 0) as totalFailed
+        FROM reports ${sql}
+      `);
+      const row = stmt.get(params) as {
+        totalSuites: number;
+        totalPassed: number;
+        totalFailed: number;
+      };
+      return row;
     },
 
     getReport(id) {
@@ -294,13 +346,32 @@ export function validateTestRunReport(body: unknown): body is TestRunReport {
   if (!Array.isArray(report.suites)) {
     return false;
   }
+  if (report.suites.length > MAX_SUITES) {
+    return false;
+  }
   return report.suites.every((suite) => {
     if (!suite || typeof suite !== 'object') {
       return false;
     }
     const s = suite as Record<string, unknown>;
-    return typeof s.name === 'string' && typeof s.passed === 'boolean' && Array.isArray(s.results);
+    if (!Array.isArray(s.results) || s.results.length > MAX_STEPS_PER_SUITE) {
+      return false;
+    }
+    return typeof s.name === 'string' && typeof s.passed === 'boolean';
   });
+}
+
+export function validateIngestMeta(meta: ReportIngestMeta): string | null {
+  if (meta.label && meta.label.length > MAX_META_STRING) {
+    return `label exceeds ${MAX_META_STRING} characters`;
+  }
+  if (meta.project && meta.project.length > MAX_META_STRING) {
+    return `project exceeds ${MAX_META_STRING} characters`;
+  }
+  if (meta.tags && meta.tags.length > MAX_TAGS) {
+    return `too many tags (max ${MAX_TAGS})`;
+  }
+  return null;
 }
 
 export function parseIngestMeta(body: Record<string, unknown>): ReportIngestMeta {
@@ -352,10 +423,10 @@ export function parseReportFilters(query: Record<string, unknown>): ReportFilter
   if (query.tagMode === 'all') {
     filters.tagMode = 'all';
   }
-  if (query.limit) {
+  if (query.limit !== undefined && query.limit !== '') {
     filters.limit = Number(query.limit);
   }
-  if (query.offset) {
+  if (query.offset !== undefined && query.offset !== '') {
     filters.offset = Number(query.offset);
   }
 

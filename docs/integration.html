@@ -9,7 +9,7 @@
 <body>
   <div class="layout">
     <aside class="sidebar">
-      <a class="brand" href="index.html">Snapline Hub</a>
+      <a class="brand hub" href="index.html">Snapline Hub</a>
       <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
       <nav class="nav">
         <div class="nav-section">Documentation</div>
@@ -135,6 +135,8 @@ await pushTestReportToHub(report, {
         <tbody>
           <tr><td><code>SNAPLINE_HUB_URL</code></td><td>Hub base URL, e.g. <code>http://localhost:3847</code> or <code>https://hub.yourcompany.com</code></td></tr>
           <tr><td><code>SNAPLINE_HUB_LABEL</code></td><td>Optional label shown in the Hub UI</td></tr>
+          <tr><td><code>SNAPLINE_HUB_PROJECT</code></td><td>Logical project grouping (e.g. <code>snapline-demo</code>, <code>my-app</code>)</td></tr>
+          <tr><td><code>SNAPLINE_HUB_TAGS</code></td><td>Comma-separated tags (e.g. <code>node,demo,ci</code>)</td></tr>
         </tbody>
       </table>
 

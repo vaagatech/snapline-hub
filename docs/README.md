@@ -12,6 +12,20 @@ Documentation lives in the `docs/` folder and deploys automatically via `.github
 
 https://vaagatech.github.io/snapline-hub/
 
+## Site structure
+
+| Page | Contents |
+|------|----------|
+| [index.html](index.html) | Overview, when to use Hub, data flow |
+| [installation.html](installation.html) | Dev vs production setup |
+| [getting-started.html](getting-started.html) | Push your first report |
+| [guide.html](guide.html) | UI guide: search, quick filters, projects & tags |
+| [integration.html](integration.html) | Node.js and Python push APIs |
+| [architecture.html](architecture.html) | Components and data model |
+| [api-reference.html](api-reference.html) | REST API including `/api/facets` |
+
+Styling: [assets/style.css](assets/style.css) — shared design with Snapline docs.
+
 ## Related documentation
 
 | Repo | GitHub Pages URL |
