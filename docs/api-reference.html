@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>API Reference — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html" class="active">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>API Reference</h1>
+        <p class="lead">REST API for ingesting, querying, and managing Snapline test reports. Base URL: <code>http://localhost:3847/api</code> (default).</p>
+      </header>
+
+      <h2>Endpoints summary</h2>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Path</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>GET</code></td><td><code>/api/health</code></td><td>Health check and report count</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/stats</code></td><td>Dashboard aggregate statistics</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/reports</code></td><td>List report summaries (paginated)</td></tr>
+          <tr><td><code>GET</code></td><td><code>/api/reports/:id</code></td><td>Get full stored report</td></tr>
+          <tr><td><code>POST</code></td><td><code>/api/reports</code></td><td>Ingest a <code>TestRunReport</code></td></tr>
+          <tr><td><code>DELETE</code></td><td><code>/api/reports/:id</code></td><td>Delete a report</td></tr>
+        </tbody>
+      </table>
+
+      <p>All JSON responses use <code>Content-Type: application/json</code>. Request bodies for <code>POST</code> must be JSON.</p>
+
+      <h2>GET /api/health</h2>
+      <p>Health check. Use for load balancers and startup probes.</p>
+      <h3>Response <code>200</code></h3>
+      <pre><code>{
+  "status": "ok",
+  "reports": 42
+}</code></pre>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>status</code></td><td>string</td><td>Always <code>"ok"</code> when server is running</td></tr>
+          <tr><td><code>reports</code></td><td>number</td><td>Total reports in database</td></tr>
+        </tbody>
+      </table>
+
+      <h2>GET /api/stats</h2>
+      <p>Aggregate statistics for the dashboard.</p>
+      <h3>Response <code>200</code></h3>
+      <pre><code>{
+  "totalRuns": 10,
+  "totalSuites": 45,
+  "totalPassed": 40,
+  "totalFailed": 5,
+  "passRate": 89,
+  "frameworks": ["@vaagatech/snapline-engine", "snapline-engine"],
+  "recentRuns": [ /* ReportSummary[] — up to 5 */ ]
+}</code></pre>
+
+      <h2>GET /api/reports</h2>
+      <p>List stored report summaries, newest first.</p>
+      <h3>Query parameters</h3>
+      <table>
+        <thead><tr><th>Param</th><th>Default</th><th>Max</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>limit</code></td><td>50</td><td>200</td><td>Page size</td></tr>
+          <tr><td><code>offset</code></td><td>0</td><td>—</td><td>Skip N reports</td></tr>
+        </tbody>
+      </table>
+      <h3>Response <code>200</code></h3>
+      <pre><code>{
+  "total": 100,
+  "limit": 50,
+  "offset": 0,
+  "reports": [
+    {
+      "id": "a49cab94-52f8-42aa-a393-73ebcc47384e",
+      "generatedAt": "2026-07-07T10:00:00.000Z",
+      "framework": "@vaagatech/snapline-engine",
+      "label": "CI build #42",
+      "total": 3,
+      "passed": 2,
+      "failed": 1,
+      "durationMs": 1200,
+      "environment": { "baseUrl": "http://localhost:3000" }
+    }
+  ]
+}</code></pre>
+
+      <h2>GET /api/reports/:id</h2>
+      <p>Retrieve a full stored report including nested suite and step data.</p>
+      <h3>Response <code>200</code></h3>
+      <pre><code>{
+  "id": "a49cab94-52f8-42aa-a393-73ebcc47384e",
+  "generatedAt": "2026-07-07T10:00:00.000Z",
+  "framework": "@vaagatech/snapline-engine",
+  "label": "CI build #42",
+  "total": 1,
+  "passed": 0,
+  "failed": 1,
+  "durationMs": 450,
+  "environment": { "baseUrl": "http://localhost:3000" },
+  "report": {
+    "generatedAt": "2026-07-07T10:00:00.000Z",
+    "framework": "@vaagatech/snapline-engine",
+    "summary": { "total": 1, "passed": 0, "failed": 1, "durationMs": 450 },
+    "environment": { "baseUrl": "http://localhost:3000" },
+    "suites": [ /* TestSuiteResult[] */ ]
+  }
+}</code></pre>
+      <h3>Response <code>404</code></h3>
+      <pre><code>{ "error": "Report not found" }</code></pre>
+
+      <h2>POST /api/reports</h2>
+      <p>Ingest a <code>TestRunReport</code>. This is the endpoint used by <code>pushTestReportToHub</code>.</p>
+
+      <h3>Request body</h3>
+      <p>A <code>TestRunReport</code> object. An optional top-level <code>label</code> string sets the display name in the UI (stripped before storage).</p>
+      <pre><code>{
+  "label": "Optional display name",
+  "generatedAt": "2026-07-07T10:00:00.000Z",
+  "framework": "@vaagatech/snapline-engine",
+  "summary": {
+    "total": 1,
+    "passed": 1,
+    "failed": 0,
+    "durationMs": 500
+  },
+  "environment": { "baseUrl": "https://api.example.com" },
+  "suites": [
+    {
+      "name": "My test suite",
+      "passed": true,
+      "results": [
+        { "step": "api", "passed": true, "message": "api response matched fixture file" }
+      ]
+    }
+  ]
+}</code></pre>
+
+      <h3>Query parameters (alternative label)</h3>
+      <p><code>?label=My+run</code> — label can also be passed as a query parameter instead of in the body.</p>
+
+      <h3>Response <code>201</code></h3>
+      <pre><code>{
+  "id": "a49cab94-52f8-42aa-a393-73ebcc47384e",
+  "url": "/reports/a49cab94-52f8-42aa-a393-73ebcc47384e"
+}</code></pre>
+      <p>The <code>url</code> path is relative. Full URL: <code>{hubBaseUrl}{url}</code>.</p>
+
+      <h3>Response <code>400</code></h3>
+      <pre><code>{
+  "error": "Invalid TestRunReport payload",
+  "hint": "Expected { generatedAt, framework, summary: { total, passed, failed }, suites: [...] }"
+}</code></pre>
+
+      <h3>Validation rules</h3>
+      <ul>
+        <li><code>generatedAt</code> — required string (ISO 8601)</li>
+        <li><code>framework</code> — required string</li>
+        <li><code>summary.total</code>, <code>summary.passed</code>, <code>summary.failed</code> — required numbers</li>
+        <li><code>suites</code> — required array; each suite must have <code>name</code> (string), <code>passed</code> (boolean), <code>results</code> (array)</li>
+      </ul>
+
+      <h3>curl example</h3>
+      <pre><code>curl -X POST http://localhost:3847/api/reports \
+  -H 'Content-Type: application/json' \
+  -d '{
+    "label": "Manual upload",
+    "generatedAt": "2026-07-07T10:00:00.000Z",
+    "framework": "manual",
+    "summary": { "total": 1, "passed": 1, "failed": 0 },
+    "suites": [{
+      "name": "Smoke test",
+      "passed": true,
+      "results": [{ "step": "ping", "passed": true }]
+    }]
+  }'</code></pre>
+
+      <h2>DELETE /api/reports/:id</h2>
+      <p>Permanently delete a stored report.</p>
+      <h3>Response <code>204</code></h3>
+      <p>Empty body on success.</p>
+      <h3>Response <code>404</code></h3>
+      <pre><code>{ "error": "Report not found" }</code></pre>
+
+      <h2>Data types</h2>
+
+      <h3>DiffResult</h3>
+      <pre><code>{
+  "path": "segment",
+  "actual": "premium",
+  "expected": "standard",
+  "message": "Value mismatch"
+}</code></pre>
+
+      <h3>TestStepResult</h3>
+      <table>
+        <thead><tr><th>Field</th><th>Type</th><th>Required</th><th>Description</th></tr></thead>
+        <tbody>
+          <tr><td><code>step</code></td><td>string</td><td>yes</td><td>Step or case identifier</td></tr>
+          <tr><td><code>passed</code></td><td>boolean</td><td>yes</td><td>Pass/fail</td></tr>
+          <tr><td><code>message</code></td><td>string</td><td>no</td><td>Human-readable message</td></tr>
+          <tr><td><code>diff</code></td><td>DiffResult | null</td><td>no</td><td>First mismatch on failure</td></tr>
+          <tr><td><code>processed</code></td><td>unknown</td><td>no</td><td>Processed live data</td></tr>
+          <tr><td><code>data</code></td><td>unknown</td><td>no</td><td>Raw API response</td></tr>
+          <tr><td><code>source</code></td><td>unknown</td><td>no</td><td>Cross-system source</td></tr>
+          <tr><td><code>target</code></td><td>unknown</td><td>no</td><td>Cross-system target</td></tr>
+          <tr><td><code>token</code></td><td>string | null</td><td>no</td><td>Auth token (usually redacted)</td></tr>
+          <tr><td><code>match</code></td><td>boolean</td><td>no</td><td>Cross-system match flag</td></tr>
+        </tbody>
+      </table>
+
+      <h3>TestSuiteResult</h3>
+      <pre><code>{
+  "name": "Suite display name",
+  "passed": false,
+  "results": [ /* TestStepResult[] */ ]
+}</code></pre>
+
+      <h3>TestRunReport</h3>
+      <pre><code>{
+  "generatedAt": "ISO-8601 string",
+  "framework": "string",
+  "summary": {
+    "total": 0,
+    "passed": 0,
+    "failed": 0,
+    "durationMs": 0
+  },
+  "environment": { "key": "value" },
+  "suites": [ /* TestSuiteResult[] */ ]
+}</code></pre>
+
+      <h2>Request size</h2>
+      <p>JSON body limit is <strong>50 MB</strong>. Large warehouse comparison reports should use Snapline's JSONL stream format locally; Hub is optimized for standard <code>TestRunReport</code> payloads.</p>
+
+      <h2>CORS</h2>
+      <p>CORS is enabled for all origins by default, allowing the Vite dev server to call the API. In production behind a reverse proxy, restrict origins at the proxy layer if needed.</p>
+
+      <h2>Authentication</h2>
+      <p>Hub does not implement authentication. Deploy behind a VPN, reverse proxy with auth, or internal network. Do not expose an unauthenticated Hub instance to the public internet.</p>
+
+      <footer class="footer">
+        <p><a href="architecture.html">Architecture →</a> · <a href="integration.html">Snapline Integration →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

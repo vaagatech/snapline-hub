@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Getting Started — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html" class="active">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Getting Started</h1>
+        <p class="lead">Start Snapline Hub, push your first test report, and view results in the dashboard — in about five minutes.</p>
+      </header>
+
+      <h2>Minute 1 — Start Snapline Hub</h2>
+      <pre><code>git clone https://github.com/vaagatech/snapline-hub.git
+cd snapline-hub
+npm install
+npm run dev</code></pre>
+      <p>Open <strong>http://localhost:5173</strong>. You should see the dashboard with an empty state.</p>
+
+      <h2>Minute 2 — Choose how to send a report</h2>
+      <p>You have three ways to get data into Hub:</p>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Best for</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>A. Push from Snapline</strong></td><td>Active test runners (Node.js or Python)</td></tr>
+          <tr><td><strong>B. Upload JSON file</strong></td><td>Existing <code>TestRunReport</code> files from <code>writeTestReport</code></td></tr>
+          <tr><td><strong>C. curl / REST API</strong></td><td>Custom scripts, non-Snapline tools producing compatible JSON</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Minute 3 — Push from Snapline (recommended)</h2>
+
+      <h3>Option A: Node.js</h3>
+      <p>If you have the <a href="https://github.com/vaagatech/snapline">Snapline Node.js repo</a> cloned:</p>
+      <pre><code>cd snapline
+npm install
+SNAPLINE_HUB_URL=http://localhost:3847 npm run demo</code></pre>
+      <p>The demo runner executes 21 integration scenarios and pushes an aggregate report labeled <code>Full integration demo</code>.</p>
+
+      <h3>Option B: Python</h3>
+      <pre><code>cd snapline-python
+uv sync
+SNAPLINE_HUB_URL=http://localhost:3847 uv run demo</code></pre>
+
+      <h3>Option C: Minimal push from your own test</h3>
+      <p>Node.js:</p>
+      <pre><code>import { testSuite, buildReport, pushTestReportToHub } from '@vaagatech/snapline-core';
+
+const result = await testSuite('My first test', {
+  baseUrl: 'https://api.example.com',
+  api: {
+    endpoint: '/users/me',
+    method: 'GET',
+    expectedFile: './fixtures/expected.json',
+  },
+});
+
+const report = buildReport([result], { durationMs: 500 });
+await pushTestReportToHub(report, {
+  hubUrl: 'http://localhost:3847',
+  label: 'My first Hub push',
+});</code></pre>
+
+      <p>Python:</p>
+      <pre><code>import asyncio
+from snapline.core import test_suite, build_report, push_test_report_to_hub
+
+async def main():
+    result = await test_suite("My first test", {
+        "baseUrl": "https://api.example.com",
+        "api": {
+            "endpoint": "/users/me",
+            "method": "GET",
+            "expectedFile": "fixtures/expected.json",
+        },
+    })
+    report = build_report([result], {"durationMs": 500})
+    push_test_report_to_hub(report, hub_url="http://localhost:3847", label="My first Hub push")
+
+asyncio.run(main())</code></pre>
+
+      <h2>Minute 4 — View in the dashboard</h2>
+      <ol>
+        <li>Refresh the Hub dashboard at <strong>http://localhost:5173</strong></li>
+        <li>You should see <strong>Total Runs</strong> increment and a new row under <strong>Recent Runs</strong></li>
+        <li>Click the run name to open the <strong>Run Detail</strong> page</li>
+        <li>Expand any suite to see individual steps</li>
+        <li>Failed steps show a <strong>diff block</strong> with <code>path</code>, <code>actual</code>, and <code>expected</code></li>
+      </ol>
+
+      <h2>Minute 5 — Upload an existing JSON report</h2>
+      <p>If you already have a Snapline JSON report file:</p>
+      <ol>
+        <li>Generate one: <code>REPORT_FORMAT=json REPORT_OUTPUT=./reports/run.json npm run demo</code> (Node.js)</li>
+        <li>In Hub, go to <strong>Upload Report</strong> in the sidebar</li>
+        <li>Drag <code>run.json</code> onto the drop zone (or click to browse)</li>
+        <li>Hub validates the JSON, stores it, and navigates to the run detail page</li>
+      </ol>
+
+      <h3>Upload via curl</h3>
+      <pre><code>curl -X POST http://localhost:3847/api/reports \
+  -H 'Content-Type: application/json' \
+  -d @reports/run.json</code></pre>
+      <p>Response:</p>
+      <pre><code>{ "id": "a1b2c3d4-...", "url": "/reports/a1b2c3d4-..." }</code></pre>
+
+      <h2>What you should see</h2>
+      <p>A successful <code>TestRunReport</code> in Hub contains:</p>
+      <table>
+        <thead>
+          <tr><th>Section</th><th>Example</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Summary</td><td>3 suites, 2 passed, 1 failed, 1200ms duration</td></tr>
+          <tr><td>Framework</td><td><code>@vaagatech/snapline-engine</code> or <code>snapline-engine</code></td></tr>
+          <tr><td>Environment</td><td><code>baseUrl</code>, <code>reportFormat</code>, custom keys from your meta</td></tr>
+          <tr><td>Suites</td><td>One card per <code>testSuite</code> or fixture scenario</td></tr>
+          <tr><td>Steps</td><td>Per-case directory names (fixtures) or step names (<code>auth</code>, <code>api</code>, etc.)</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Next steps:</strong>
+        Read the <a href="guide.html">User Guide</a> for dashboard features and
+        <a href="integration.html">Snapline Integration</a> for CI and environment variable setup.
+      </div>
+
+      <footer class="footer">
+        <p><a href="guide.html">User Guide →</a> · <a href="integration.html">Snapline Integration →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

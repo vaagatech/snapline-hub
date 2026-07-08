@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Installation — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html" class="active">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Installation</h1>
+        <p class="lead">Install and run Snapline Hub locally, on a team server, or in CI-adjacent environments. No external database is required.</p>
+      </header>
+
+      <div class="toc">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#prerequisites">Prerequisites</a></li>
+          <li><a href="#clone">Clone the repository</a></li>
+          <li><a href="#install-deps">Install dependencies</a></li>
+          <li><a href="#dev-mode">Development mode</a></li>
+          <li><a href="#production">Production build</a></li>
+          <li><a href="#env-vars">Environment variables</a></li>
+          <li><a href="#verify">Verify installation</a></li>
+          <li><a href="#deployment">Deployment options</a></li>
+          <li><a href="#github-pages">Publishing this documentation</a></li>
+        </ul>
+      </div>
+
+      <h2 id="prerequisites">Prerequisites</h2>
+      <table>
+        <thead>
+          <tr><th>Requirement</th><th>Version</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Node.js</strong></td>
+            <td>18 or later</td>
+            <td>LTS recommended. Hub is a Node.js application (Express API + React UI).</td>
+          </tr>
+          <tr>
+            <td><strong>npm</strong></td>
+            <td>9+ (bundled with Node)</td>
+            <td>Used for install, build, and start scripts.</td>
+          </tr>
+          <tr>
+            <td><strong>Git</strong></td>
+            <td>Any recent version</td>
+            <td>To clone the repository.</td>
+          </tr>
+          <tr>
+            <td><strong>Snapline</strong></td>
+            <td>Optional</td>
+            <td>Only needed if you push reports from test runners. See <a href="integration.html">Snapline Integration</a>.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <p>Hub uses <code>better-sqlite3</code> (native addon) for storage. On most platforms, prebuilt binaries install automatically via <code>npm install</code>. If compilation fails, ensure you have build tools installed (Xcode CLI on macOS, <code>build-essential</code> on Linux).</p>
+
+      <h2 id="clone">Clone the repository</h2>
+      <pre><code>git clone https://github.com/vaagatech/snapline-hub.git
+cd snapline-hub</code></pre>
+      <p>Snapline Hub is a <strong>standalone repository</strong>. It is not an npm package and is not published to the npm registry. You run it from source.</p>
+
+      <h2 id="install-deps">Install dependencies</h2>
+      <pre><code>npm install</code></pre>
+      <p>This installs:</p>
+      <ul>
+        <li><strong>Runtime:</strong> Express, better-sqlite3, cors, uuid</li>
+        <li><strong>Dev/build:</strong> TypeScript, Vite, React, Vitest, tsx</li>
+      </ul>
+
+      <h2 id="dev-mode">Development mode</h2>
+      <p>Development runs two processes concurrently:</p>
+      <table>
+        <thead>
+          <tr><th>Process</th><th>Port</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>API server (<code>tsx watch server/index.ts</code>)</td><td><strong>3847</strong></td><td>REST API + SQLite</td></tr>
+          <tr><td>Vite dev server (<code>vite</code>)</td><td><strong>5173</strong></td><td>React UI with hot reload; proxies <code>/api</code> to 3847</td></tr>
+        </tbody>
+      </table>
+      <pre><code>npm run dev</code></pre>
+      <p>Open <strong>http://localhost:5173</strong> in your browser. API requests from the UI are proxied to the backend automatically.</p>
+
+      <h3>Run API or UI separately</h3>
+      <pre><code>npm run dev:server   # API only on :3847
+npm run dev:web      # UI only on :5173 (requires API running)</code></pre>
+
+      <h2 id="production">Production build</h2>
+      <p>For a single-process deployment, build the React UI and compile the TypeScript server:</p>
+      <pre><code>npm run build
+npm start</code></pre>
+      <p>This:</p>
+      <ol>
+        <li>Builds the React app into <code>web/dist/</code></li>
+        <li>Compiles the server into <code>dist/server/</code></li>
+        <li>Starts the server on port <strong>3847</strong>, serving both API and static UI</li>
+      </ol>
+      <p>Open <strong>http://localhost:3847</strong> (or your configured <code>PORT</code>).</p>
+
+      <h3>Build scripts reference</h3>
+      <table>
+        <thead>
+          <tr><th>Script</th><th>Command</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>npm run build</code></td><td>build:web + build:server</td><td>Full production build</td></tr>
+          <tr><td><code>npm run build:web</code></td><td>vite build</td><td>React UI → <code>web/dist/</code></td></tr>
+          <tr><td><code>npm run build:server</code></td><td>tsc</td><td>Server → <code>dist/server/</code></td></tr>
+          <tr><td><code>npm start</code></td><td>node dist/server/index.js</td><td>Run production server</td></tr>
+          <tr><td><code>npm test</code></td><td>vitest run</td><td>API integration tests</td></tr>
+          <tr><td><code>npm run typecheck</code></td><td>tsc (server + web)</td><td>TypeScript validation</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="env-vars">Environment variables</h2>
+      <table>
+        <thead>
+          <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>PORT</code></td>
+            <td><code>3847</code></td>
+            <td>HTTP port for the API and (in production) the static UI.</td>
+          </tr>
+          <tr>
+            <td><code>SNAPLINE_HUB_DB</code></td>
+            <td><code>./data/snapline-hub.db</code></td>
+            <td>Path to the SQLite database file. Parent directories are created automatically.</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>Example: custom port and database path</h3>
+      <pre><code>PORT=8080 SNAPLINE_HUB_DB=/var/lib/snapline-hub/reports.db npm start</code></pre>
+
+      <div class="callout warn">
+        <strong>Data persistence:</strong> Reports are stored in the SQLite file at <code>SNAPLINE_HUB_DB</code>.
+        Back up this file if you need to preserve history. Deleting the file resets all stored runs.
+      </div>
+
+      <h2 id="verify">Verify installation</h2>
+      <h3>1. Health check</h3>
+      <pre><code>curl http://localhost:3847/api/health</code></pre>
+      <p>Expected response:</p>
+      <pre><code>{ "status": "ok", "reports": 0 }</code></pre>
+
+      <h3>2. Run tests</h3>
+      <pre><code>npm test</code></pre>
+      <p>Six API integration tests validate ingest, list, retrieve, stats, delete, and validation.</p>
+
+      <h3>3. Open the UI</h3>
+      <p>After <code>npm run dev</code> or <code>npm start</code>, open the dashboard. An empty state prompts you to upload a report or set <code>SNAPLINE_HUB_URL</code> in your Snapline test runner.</p>
+
+      <h2 id="deployment">Deployment options</h2>
+
+      <h3>Local / team server</h3>
+      <p>Run Hub on a machine your team can reach. Set <code>SNAPLINE_HUB_URL</code> in CI and developer environments to point at that server.</p>
+      <pre><code># On the server
+git clone https://github.com/vaagatech/snapline-hub.git
+cd snapline-hub
+npm install
+npm run build
+PORT=3847 SNAPLINE_HUB_DB=/data/snapline-hub.db npm start</code></pre>
+      <p>Use a process manager (systemd, PM2, Docker) to keep the process running across restarts.</p>
+
+      <h3>systemd example</h3>
+      <pre><code>[Unit]
+Description=Snapline Hub
+After=network.target
+
+[Service]
+Type=simple
+User=snapline
+WorkingDirectory=/opt/snapline-hub
+Environment=PORT=3847
+Environment=SNAPLINE_HUB_DB=/var/lib/snapline-hub/data.db
+ExecStart=/usr/bin/node dist/server/index.js
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target</code></pre>
+
+      <h3>Reverse proxy (nginx)</h3>
+      <p>Place Hub behind nginx or another reverse proxy for TLS and authentication at the edge:</p>
+      <pre><code>location / {
+    proxy_pass http://127.0.0.1:3847;
+    proxy_http_version 1.1;
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+}</code></pre>
+      <p>Then set <code>SNAPLINE_HUB_URL=https://hub.yourcompany.com</code> in test runners.</p>
+
+      <h3>CI pipeline</h3>
+      <p>Hub is typically <em>not</em> run inside CI. Instead, CI pushes reports to a long-running Hub instance after tests complete. See <a href="integration.html#ci">CI integration</a>.</p>
+
+      <h2 id="github-pages">Publishing this documentation</h2>
+      <p>This documentation site deploys to GitHub Pages automatically when <code>docs/</code> changes are pushed to <code>main</code>.</p>
+      <ol>
+        <li>Open repository <strong>Settings → Pages</strong></li>
+        <li>Set <strong>Source</strong> to <strong>GitHub Actions</strong></li>
+        <li>Push to <code>main</code> — workflow <code>Deploy documentation to GitHub Pages</code> runs</li>
+      </ol>
+      <p>Published URL: <strong>https://vaagatech.github.io/snapline-hub/</strong></p>
+      <p>Local preview: <code>npx serve docs</code> from the repo root.</p>
+
+      <footer class="footer">
+        <p><a href="getting-started.html">Getting Started →</a> · <a href="integration.html">Snapline Integration →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

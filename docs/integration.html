@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapline Integration — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html" class="active">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Snapline Integration</h1>
+        <p class="lead">Push test reports from Snapline for Node.js and Python into Hub. Covers programmatic APIs, environment variables, CLI flags, and CI pipelines.</p>
+      </header>
+
+      <div class="callout">
+        <strong>Prerequisite:</strong> Snapline Hub must be running and reachable at the URL you configure.
+        See <a href="installation.html">Installation</a>.
+      </div>
+
+      <h2>Overview</h2>
+      <p>Snapline produces <code>TestSuiteResult</code> objects from every test run. To send data to Hub:</p>
+      <ol>
+        <li>Collect one or more <code>TestSuiteResult</code> values</li>
+        <li>Build a <code>TestRunReport</code> with <code>buildReport()</code> / <code>build_report()</code></li>
+        <li>Push with <code>pushTestReportToHub()</code> / <code>push_test_report_to_hub()</code></li>
+      </ol>
+      <p>You can also write a local JSON file <em>and</em> push to Hub in the same run — they are independent.</p>
+
+      <h2 id="nodejs">Node.js integration</h2>
+      <p>Package: <a href="https://www.npmjs.com/package/@vaagatech/snapline-core"><code>@vaagatech/snapline-core</code></a></p>
+
+      <h3>Exports</h3>
+      <table>
+        <thead>
+          <tr><th>Function</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>buildReport(suites, meta?)</code></td><td>Build <code>TestRunReport</code> from suite results</td></tr>
+          <tr><td><code>pushTestReportToHub(report, config)</code></td><td>POST report to Hub API</td></tr>
+          <tr><td><code>resolveHubConfig(argv?)</code></td><td>Read <code>SNAPLINE_HUB_URL</code> / CLI flags</td></tr>
+          <tr><td><code>writeTestReport(suites, config, meta?)</code></td><td>Write local file (optional, independent of Hub)</td></tr>
+          <tr><td><code>resolveReportConfig(argv?)</code></td><td>Read <code>REPORT_FORMAT</code> / CLI flags for local files</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Basic push</h3>
+      <pre><code>import {
+  testSuite,
+  buildReport,
+  pushTestReportToHub,
+} from '@vaagatech/snapline-core';
+
+const startedAt = Date.now();
+const result = await testSuite('User sync', {
+  baseUrl: process.env.API_BASE_URL,
+  api: {
+    endpoint: '/api/v1/users/me',
+    method: 'GET',
+    expectedFile: './fixtures/expected.json',
+  },
+});
+
+const report = buildReport([result], {
+  durationMs: Date.now() - startedAt,
+  environment: {
+    baseUrl: process.env.API_BASE_URL ?? '',
+    branch: process.env.CI_BRANCH ?? 'local',
+  },
+});
+
+await pushTestReportToHub(report, {
+  hubUrl: 'http://localhost:3847',
+  label: 'User sync — staging',
+});
+
+process.exitCode = result.passed ? 0 : 1;</code></pre>
+
+      <h3>Fixture cases</h3>
+      <pre><code>import {
+  fixturesDir,
+  runApiFixtureCases,
+  buildReport,
+  pushTestReportToHub,
+} from '@vaagatech/snapline-core';
+
+const startedAt = Date.now();
+const result = await runApiFixtureCases({
+  suiteName: 'Customer account — GraphQL cases',
+  fixturesRoot: fixturesDir(import.meta.url),
+  baseUrl: process.env.API_BASE_URL,
+  defaults: { endpoint: '/graphql', protocol: 'graphql' },
+});
+
+const report = buildReport([result], {
+  durationMs: Date.now() - startedAt,
+  environment: { baseUrl: process.env.API_BASE_URL ?? '' },
+});
+
+await pushTestReportToHub(report, {
+  hubUrl: process.env.SNAPLINE_HUB_URL!,
+  label: 'GraphQL fixture suite',
+});</code></pre>
+
+      <h3>Environment variables (Node.js)</h3>
+      <table>
+        <thead>
+          <tr><th>Variable</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>SNAPLINE_HUB_URL</code></td><td>Hub base URL, e.g. <code>http://localhost:3847</code> or <code>https://hub.yourcompany.com</code></td></tr>
+          <tr><td><code>SNAPLINE_HUB_LABEL</code></td><td>Optional label shown in the Hub UI</td></tr>
+        </tbody>
+      </table>
+
+      <h3>CLI flags (Node.js)</h3>
+      <table>
+        <thead>
+          <tr><th>Flag</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>--hub-url=&lt;url&gt;</code></td><td>Hub base URL (overrides env)</td></tr>
+          <tr><td><code>--hub-label=&lt;label&gt;</code></td><td>Run label (overrides env)</td></tr>
+        </tbody>
+      </table>
+      <pre><code>node tests/run.mjs --hub-url=http://localhost:3847 --hub-label="PR #42"</code></pre>
+
+      <h3>Using resolveHubConfig</h3>
+      <pre><code>import { buildReport, pushTestReportToHub, resolveHubConfig } from '@vaagatech/snapline-core';
+
+const report = buildReport(results, { durationMs });
+const hubConfig = resolveHubConfig();
+
+if (hubConfig) {
+  const { url } = await pushTestReportToHub(report, hubConfig);
+  console.log(`Report pushed to ${url}`);
+}</code></pre>
+
+      <h3>Full demo runner</h3>
+      <p>The Snapline monorepo demo automatically pushes when <code>SNAPLINE_HUB_URL</code> is set:</p>
+      <pre><code>cd snapline
+npm install
+SNAPLINE_HUB_URL=http://localhost:3847 npm run demo</code></pre>
+      <p>Pushes all 21 scenario results as one report labeled <code>Full integration demo</code>.</p>
+
+      <h2 id="python">Python integration</h2>
+      <p>Package: <code>snapline-core</code> (import <code>snapline.core</code>)</p>
+
+      <h3>Exports</h3>
+      <table>
+        <thead>
+          <tr><th>Function</th><th>Node.js equivalent</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>build_report(suites, meta=None)</code></td><td><code>buildReport()</code></td></tr>
+          <tr><td><code>push_test_report_to_hub(report, ...)</code></td><td><code>pushTestReportToHub()</code></td></tr>
+          <tr><td><code>resolve_hub_config(argv=None)</code></td><td><code>resolveHubConfig()</code></td></tr>
+          <tr><td><code>write_test_report(suites, config, meta=None)</code></td><td><code>writeTestReport()</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Basic push</h3>
+      <pre><code>import asyncio
+import time
+from snapline.core import test_suite, build_report, push_test_report_to_hub
+
+async def main():
+    started = time.time() * 1000
+    result = await test_suite("User sync", {
+        "baseUrl": "https://api.example.com",
+        "api": {
+            "endpoint": "/api/v1/users/me",
+            "method": "GET",
+            "expectedFile": "fixtures/expected.json",
+        },
+    })
+
+    report = build_report([result], {
+        "durationMs": int(time.time() * 1000 - started),
+        "environment": {"baseUrl": "https://api.example.com"},
+    })
+
+    push_test_report_to_hub(
+        report,
+        hub_url="http://localhost:3847",
+        label="User sync — staging",
+    )
+
+asyncio.run(main())</code></pre>
+
+      <h3>Using resolve_hub_config</h3>
+      <pre><code>from snapline.core import build_report, push_test_report_to_hub, resolve_hub_config
+
+report = build_report(results, {"durationMs": duration_ms})
+hub_config = resolve_hub_config()
+
+if hub_config:
+    result = push_test_report_to_hub(report, config=hub_config)
+    print(f"Report pushed to {result['url']}")</code></pre>
+
+      <h3>Environment variables (Python)</h3>
+      <p>Same as Node.js: <code>SNAPLINE_HUB_URL</code> and <code>SNAPLINE_HUB_LABEL</code>.</p>
+      <pre><code>SNAPLINE_HUB_URL=http://localhost:3847 uv run demo</code></pre>
+
+      <h3>CLI flags (Python)</h3>
+      <pre><code>python run_demo.py --hub-url=http://localhost:3847 --hub-label="nightly"</code></pre>
+
+      <h2 id="ci">CI integration</h2>
+      <p>Typical pattern: run tests in CI, push report to a persistent Hub instance, fail the job if tests failed.</p>
+
+      <h3>GitHub Actions (Node.js)</h3>
+      <pre><code>jobs:
+  integration-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - run: npm ci
+      - name: Run integration tests
+        env:
+          API_BASE_URL: ${{ secrets.STAGING_API_URL }}
+          SNAPLINE_HUB_URL: ${{ vars.SNAPLINE_HUB_URL }}
+          SNAPLINE_HUB_LABEL: "CI ${{ github.run_number }} — ${{ github.sha }}"
+        run: node tests/run.mjs
+      # tests/run.mjs should call pushTestReportToHub when resolveHubConfig() returns config</code></pre>
+
+      <h3>GitHub Actions (Python)</h3>
+      <pre><code>      - name: Run integration tests
+        env:
+          SNAPLINE_HUB_URL: ${{ vars.SNAPLINE_HUB_URL }}
+          SNAPLINE_HUB_LABEL: "CI ${{ github.run_number }}"
+        run: uv run pytest tests/ -v</code></pre>
+
+      <h3>Combined: local file + Hub</h3>
+      <pre><code>import { buildReport, pushTestReportToHub, resolveHubConfig, resolveReportConfig, writeTestReport } from '@vaagatech/snapline-core';
+
+const report = buildReport(results, { durationMs, environment: { baseUrl } });
+
+const reportConfig = resolveReportConfig();
+if (reportConfig) {
+  writeTestReport(results, reportConfig, { durationMs, environment: { baseUrl } });
+}
+
+const hubConfig = resolveHubConfig();
+if (hubConfig) {
+  await pushTestReportToHub(report, hubConfig);
+}</code></pre>
+
+      <h2>TestRunReport schema</h2>
+      <p>Hub accepts the same JSON schema produced by Snapline's <code>buildReport</code>:</p>
+      <pre><code>{
+  "generatedAt": "2026-07-07T10:00:00.000Z",
+  "framework": "@vaagatech/snapline-engine",
+  "summary": {
+    "total": 2,
+    "passed": 1,
+    "failed": 1,
+    "durationMs": 1200
+  },
+  "environment": {
+    "baseUrl": "http://localhost:3000",
+    "branch": "main"
+  },
+  "suites": [
+    {
+      "name": "GraphQL fixture cases",
+      "passed": false,
+      "results": [
+        { "step": "01-pass-customer-account", "passed": true },
+        {
+          "step": "04-fail-segment-mapping",
+          "passed": false,
+          "message": "Expected mismatch at segment",
+          "diff": {
+            "path": "segment",
+            "actual": "premium",
+            "expected": "standard",
+            "message": "Value mismatch"
+          }
+        }
+      ]
+    }
+  ]
+}</code></pre>
+      <p>See <a href="architecture.html">Architecture</a> for the full type reference.</p>
+
+      <h2>Error handling</h2>
+      <table>
+        <thead>
+          <tr><th>Situation</th><th>Behavior</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Hub unreachable</td><td><code>pushTestReportToHub</code> throws with HTTP status and body</td></tr>
+          <tr><td>Invalid report JSON</td><td>Hub returns <code>400</code> with validation hint</td></tr>
+          <tr><td><code>SNAPLINE_HUB_URL</code> not set</td><td><code>resolveHubConfig()</code> returns <code>undefined</code> — skip push silently</td></tr>
+          <tr><td>Tests failed but push succeeded</td><td>Hub stores the report; CI should still fail on <code>result.passed === false</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Recommended: don't fail tests when Hub push fails</h3>
+      <pre><code>const hubConfig = resolveHubConfig();
+if (hubConfig) {
+  try {
+    const { url } = await pushTestReportToHub(report, hubConfig);
+    console.log(`Hub: ${url}`);
+  } catch (err) {
+    console.warn('Hub push failed (tests still evaluated):', err);
+  }
+}</code></pre>
+
+      <h2>Redaction</h2>
+      <p>Sensitive fields should be redacted <em>before</em> pushing. Use Snapline's built-in redaction when building the report:</p>
+      <pre><code>import { buildReport, redactSuiteResults } from '@vaagatech/snapline-core';
+
+const sanitized = redactSuiteResults(results, ['data.token', 'processed.password']);
+const report = buildReport(sanitized, { durationMs });</code></pre>
+      <p>Hub stores whatever JSON you send. Treat the Hub database like any test artifact store — do not push secrets.</p>
+
+      <footer class="footer">
+        <p><a href="architecture.html">Architecture →</a> · <a href="api-reference.html">API Reference →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

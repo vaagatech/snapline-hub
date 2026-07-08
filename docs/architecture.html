@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Architecture — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html" class="active">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Architecture</h1>
+        <p class="lead">How Snapline Hub is structured: components, data flow, storage, and relationship to the Snapline framework.</p>
+      </header>
+
+      <h2>System overview</h2>
+      <div class="diagram">┌─────────────────────────────────────────────────────────────┐
+│                    Snapline Ecosystem                        │
+├─────────────────────────┬───────────────────────────────────┤
+│  snapline (Node.js)     │  snapline-python                  │
+│  @vaagatech/snapline-*  │  snapline_* packages              │
+│                         │                                   │
+│  testSuite()            │  test_suite()                     │
+│  runApiFixtureCases()   │  run_api_fixture_cases()            │
+│  buildReport()          │  build_report()                     │
+│  pushTestReportToHub()  │  push_test_report_to_hub()        │
+└────────────┬────────────┴──────────────┬────────────────────┘
+             │                           │
+             │    POST /api/reports      │
+             │    (TestRunReport JSON)   │
+             ▼                           ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      snapline-hub                            │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────────┐  │
+│  │ Express API  │  │ SQLite DB    │  │ React Dashboard  │  │
+│  │ server/      │  │ data/*.db    │  │ web/src/         │  │
+│  └──────────────┘  └──────────────┘  └──────────────────┘  │
+└─────────────────────────────────────────────────────────────┘</div>
+
+      <h2>Design principles</h2>
+      <ul>
+        <li><strong>Optional</strong> — not bundled into Snapline npm/PyPI packages</li>
+        <li><strong>Single application</strong> — one repo, one deployable unit (not split by language)</li>
+        <li><strong>Schema-compatible</strong> — accepts the same <code>TestRunReport</code> from Node.js and Python</li>
+        <li><strong>Self-contained storage</strong> — SQLite, no Redis/Postgres dependency</li>
+        <li><strong>Simple deployment</strong> — <code>npm run build &amp;&amp; npm start</code></li>
+      </ul>
+
+      <h2>Repository layout</h2>
+      <pre><code>snapline-hub/
+├── server/              # Express API (TypeScript)
+│   ├── index.ts         # App entry, static file serving
+│   ├── routes.ts        # REST route handlers
+│   ├── db.ts            # SQLite + validation
+│   └── api.test.ts      # API integration tests
+├── web/                 # React UI (Vite)
+│   ├── src/
+│   │   ├── pages/       # Dashboard, Reports, Detail, Upload
+│   │   ├── api.ts       # Fetch client
+│   │   └── App.tsx      # Router + layout
+│   └── vite.config.ts
+├── shared/
+│   └── types.ts         # TestRunReport types (shared server + web)
+├── docs/                # GitHub Pages documentation (this site)
+├── data/                # SQLite database (gitignored, created at runtime)
+└── package.json</code></pre>
+
+      <h2>Server components</h2>
+      <table>
+        <thead>
+          <tr><th>Module</th><th>Responsibility</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>server/index.ts</code></td><td>Creates Express app, mounts API router, serves <code>web/dist</code> in production</td></tr>
+          <tr><td><code>server/routes.ts</code></td><td>REST endpoints: health, stats, reports CRUD</td></tr>
+          <tr><td><code>server/db.ts</code></td><td>SQLite schema, insert/list/get/delete, <code>validateTestRunReport()</code></td></tr>
+          <tr><td><code>shared/types.ts</code></td><td>TypeScript interfaces aligned with Snapline core</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Database schema</h2>
+      <p>Single table <code>reports</code> in SQLite (WAL mode):</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Type</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>TEXT PK</td><td>UUID v4</td></tr>
+          <tr><td><code>generated_at</code></td><td>TEXT</td><td>From <code>report.generatedAt</code></td></tr>
+          <tr><td><code>framework</code></td><td>TEXT</td><td>From <code>report.framework</code></td></tr>
+          <tr><td><code>label</code></td><td>TEXT NULL</td><td>Display name (push/upload only)</td></tr>
+          <tr><td><code>total</code></td><td>INTEGER</td><td><code>summary.total</code></td></tr>
+          <tr><td><code>passed</code></td><td>INTEGER</td><td><code>summary.passed</code></td></tr>
+          <tr><td><code>failed</code></td><td>INTEGER</td><td><code>summary.failed</code></td></tr>
+          <tr><td><code>duration_ms</code></td><td>INTEGER NULL</td><td><code>summary.durationMs</code></td></tr>
+          <tr><td><code>environment</code></td><td>TEXT NULL</td><td>JSON-serialized environment object</td></tr>
+          <tr><td><code>report_json</code></td><td>TEXT</td><td>Full <code>TestRunReport</code> JSON</td></tr>
+          <tr><td><code>created_at</code></td><td>TEXT</td><td>Server ingest timestamp</td></tr>
+        </tbody>
+      </table>
+      <p>Indexed on <code>generated_at DESC</code> and <code>framework</code> for list queries.</p>
+
+      <h2>Data model</h2>
+      <p>Hub stores Snapline's standard report hierarchy:</p>
+      <div class="diagram">TestRunReport
+├── generatedAt: string
+├── framework: string
+├── summary: { total, passed, failed, durationMs? }
+├── environment?: Record&lt;string, string&gt;
+└── suites: TestSuiteResult[]
+    ├── name: string
+    ├── passed: boolean
+    └── results: TestStepResult[]
+        ├── step: string
+        ├── passed: boolean
+        ├── message?: string
+        ├── diff?: DiffResult
+        ├── processed?, source?, target?, data?
+        └── ...</div>
+
+      <h3>Framework identifiers</h3>
+      <table>
+        <thead><tr><th>Runtime</th><th><code>framework</code> value</th></tr></thead>
+        <tbody>
+          <tr><td>Node.js</td><td><code>@vaagatech/snapline-engine</code></td></tr>
+          <tr><td>Python</td><td><code>snapline-engine</code></td></tr>
+        </tbody>
+      </table>
+
+      <h2>Web UI</h2>
+      <p>React 19 SPA with React Router. Pages fetch from <code>/api/*</code>:</p>
+      <table>
+        <thead><tr><th>Page</th><th>API calls</th></tr></thead>
+        <tbody>
+          <tr><td>Dashboard</td><td><code>GET /api/stats</code></td></tr>
+          <tr><td>All Runs</td><td><code>GET /api/reports</code></td></tr>
+          <tr><td>Run Detail</td><td><code>GET /api/reports/:id</code>, <code>DELETE</code></td></tr>
+          <tr><td>Upload</td><td><code>POST /api/reports</code></td></tr>
+        </tbody>
+      </table>
+
+      <h3>Development vs production</h3>
+      <table>
+        <thead><tr><th>Mode</th><th>UI</th><th>API</th><th>How</th></tr></thead>
+        <tbody>
+          <tr><td>Development</td><td>:5173 (Vite)</td><td>:3847</td><td>Vite proxies <code>/api</code> to backend</td></tr>
+          <tr><td>Production</td><td>:3847</td><td>:3847</td><td>Express serves <code>web/dist</code> + API</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Integration with Snapline</h2>
+      <p>Hub does not import Snapline packages. Integration is HTTP-only:</p>
+      <ol>
+        <li>Snapline test runner produces <code>TestSuiteResult[]</code></li>
+        <li><code>buildReport()</code> wraps into <code>TestRunReport</code></li>
+        <li><code>pushTestReportToHub()</code> POSTs JSON to Hub</li>
+        <li>Hub validates, stores in SQLite, UI reads via GET</li>
+      </ol>
+      <p>This loose coupling means Hub can be upgraded independently of Snapline framework versions, as long as the <code>TestRunReport</code> schema remains compatible.</p>
+
+      <h2>What Hub does not do</h2>
+      <ul>
+        <li><strong>Run tests</strong> — Hub only stores and displays results</li>
+        <li><strong>Stream JSONL</strong> — warehouse row-level JSONL streams stay in local files; Hub accepts batch <code>TestRunReport</code> only</li>
+        <li><strong>Authenticate users</strong> — deploy behind your own auth layer</li>
+        <li><strong>Replace CI</strong> — exit codes and pass/fail gates remain in your test runner</li>
+        <li><strong>Replace local reports</strong> — <code>writeTestReport</code> HTML/JSON/text files still work without Hub</li>
+      </ul>
+
+      <h2>Security considerations</h2>
+      <table>
+        <thead><tr><th>Topic</th><th>Guidance</th></tr></thead>
+        <tbody>
+          <tr><td>Network exposure</td><td>Run on internal network or behind authenticated reverse proxy</td></tr>
+          <tr><td>Sensitive data</td><td>Redact before push using Snapline <code>redactSuiteResults</code></td></tr>
+          <tr><td>Database file</td><td>Contains full test payloads — restrict filesystem permissions</td></tr>
+          <tr><td>Deletion</td><td>DELETE endpoint has no auth — protect at network layer</td></tr>
+          <tr><td>Request size</td><td>50 MB JSON limit — avoid pushing unbounded payloads</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Scaling</h2>
+      <p>Hub is designed for team-scale usage (hundreds to low thousands of reports). For very high volume:</p>
+      <ul>
+        <li>Archive old reports via DELETE or database backup rotation</li>
+        <li>Run multiple Hub instances with separate databases per team/project</li>
+        <li>Future: Postgres backend could replace SQLite (not implemented today)</li>
+      </ul>
+
+      <footer class="footer">
+        <p><a href="api-reference.html">API Reference →</a> · <a href="integration.html">Snapline Integration →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Snapline Hub — Test Results Reporting</title>
+  <meta name="description" content="Snapline Hub is an optional reporting UI for Snapline integration test results. Store, browse, and visualize TestRunReport data from Node.js or Python.">
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html" class="active">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+        Optional companion to the Snapline framework.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Test results reporting for Snapline</h1>
+        <p class="lead">
+          Snapline Hub is an <strong>optional</strong> web application that stores and visualizes
+          <code>TestRunReport</code> data from Snapline test runs. Use it when you want a centralized
+          dashboard for pass/fail history, suite drill-down, and structured diff inspection.
+        </p>
+        <div class="badges">
+          <span class="badge">Node.js 18+</span>
+          <span class="badge">SQLite storage</span>
+          <span class="badge">REST API</span>
+          <span class="badge">React dashboard</span>
+          <span class="badge">MIT License</span>
+        </div>
+      </header>
+
+      <div class="company-callout">
+        <strong>Part of the Snapline ecosystem</strong>
+        <p>
+          Snapline Hub complements
+          <a href="https://vaagatech.github.io/snapline/">Snapline for Node.js</a> and
+          <a href="https://vaagatech.github.io/snapline-python/">Snapline for Python</a>.
+          It is <em>not</em> bundled into the framework packages — install and run it only when you need centralized reporting.
+        </p>
+      </div>
+
+      <h2>What Snapline Hub does</h2>
+      <p>
+        Snapline test runners produce structured results: suite names, step outcomes, and on failure a
+        <code>diff</code> object with <code>path</code>, <code>actual</code>, and <code>expected</code>.
+        By default, Snapline can write these to local JSON, HTML, or text files. Snapline Hub adds:
+      </p>
+      <ul>
+        <li><strong>Persistent storage</strong> — all runs saved in a local SQLite database</li>
+        <li><strong>Web dashboard</strong> — pass rate, recent runs, filtering by status</li>
+        <li><strong>Drill-down UI</strong> — expand suites, inspect steps, view diffs inline</li>
+        <li><strong>Upload</strong> — import existing <code>TestRunReport</code> JSON files</li>
+        <li><strong>Push API</strong> — ingest reports directly from CI or test runners</li>
+      </ul>
+
+      <div class="card-grid">
+        <div class="card">
+          <h3>Dashboard</h3>
+          <p>Total runs, suites executed, pass rate, and a table of recent test runs with framework labels.</p>
+        </div>
+        <div class="card">
+          <h3>Run history</h3>
+          <p>Browse all stored runs. Filter to passed-only or failed-only. Click any run for full detail.</p>
+        </div>
+        <div class="card">
+          <h3>Diff viewer</h3>
+          <p>Failed steps show the Snapline <code>diff</code> block: field path, actual value, expected value, and message.</p>
+        </div>
+        <div class="card">
+          <h3>Framework-agnostic</h3>
+          <p>Accepts the same <code>TestRunReport</code> JSON schema from Node.js (<code>@vaagatech/snapline-core</code>) and Python (<code>snapline-core</code>).</p>
+        </div>
+      </div>
+
+      <h2>When to use it</h2>
+      <table>
+        <thead>
+          <tr><th>Scenario</th><th>Recommendation</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Local development, single developer</td>
+            <td>Optional — console output and local HTML reports may be enough</td>
+          </tr>
+          <tr>
+            <td>Team sharing test history across runs</td>
+            <td>Run Hub on a shared server; push from CI after each test job</td>
+          </tr>
+          <tr>
+            <td>Debugging reconciliation failures</td>
+            <td>Use Hub to compare diffs across runs without digging through log files</td>
+          </tr>
+          <tr>
+            <td>Demo / QA environment</td>
+            <td>Push full integration demo results with <code>SNAPLINE_HUB_URL</code></td>
+          </tr>
+          <tr>
+            <td>Production CI only needs pass/fail</td>
+            <td>Skip Hub — use <code>process.exitCode</code> or pytest exit codes</td>
+          </tr>
+        </tbody>
+      </table>
+
+      <div class="callout warn">
+        <strong>Hub is optional.</strong>
+        Snapline works fully without Snapline Hub. File-based reports (<code>writeTestReport</code> / <code>write_test_report</code>)
+        and console output are always available. Hub is an add-on for teams that want a shared UI.
+      </div>
+
+      <h2>How data flows</h2>
+      <div class="diagram">Snapline test runner (Node.js or Python)
+  │
+  ├─ testSuite() / runApiFixtureCases() / demo runner
+  │     └── TestSuiteResult[]  (per-suite pass/fail + step results)
+  │
+  ├─ buildReport() / build_report()
+  │     └── TestRunReport  { generatedAt, framework, summary, suites }
+  │
+  └─ pushTestReportToHub() / push_test_report_to_hub()  OR  manual upload
+        │
+        │  POST /api/reports  (JSON body)
+        ▼
+  Snapline Hub
+  ├─ SQLite  (persistent storage)
+  └─ React UI  (dashboard, run detail, diff viewer)</div>
+
+      <h2>Quick start</h2>
+      <pre><code>git clone https://github.com/vaagatech/snapline-hub.git
+cd snapline-hub
+npm install
+npm run dev</code></pre>
+      <p>
+        Open <strong>http://localhost:5173</strong> for the UI (development) or
+        <strong>http://localhost:3847</strong> after <code>npm run build &amp;&amp; npm start</code> (production).
+      </p>
+      <p>Push a report from Snapline:</p>
+      <pre><code># Node.js
+SNAPLINE_HUB_URL=http://localhost:3847 npm run demo
+
+# Python
+SNAPLINE_HUB_URL=http://localhost:3847 uv run demo</code></pre>
+
+      <h2>Documentation map</h2>
+      <table>
+        <thead>
+          <tr><th>Page</th><th>Contents</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><a href="installation.html">Installation</a></td><td>Prerequisites, clone, dev vs production, environment variables, deployment options</td></tr>
+          <tr><td><a href="getting-started.html">Getting Started</a></td><td>5-minute walkthrough: start Hub, push first report, view in UI</td></tr>
+          <tr><td><a href="guide.html">User Guide</a></td><td>Dashboard, run history, upload, run detail, diff inspection, labels</td></tr>
+          <tr><td><a href="integration.html">Snapline Integration</a></td><td>Node.js and Python push APIs, env vars, CLI flags, CI examples</td></tr>
+          <tr><td><a href="architecture.html">Architecture</a></td><td>Components, data model, storage, security considerations</td></tr>
+          <tr><td><a href="api-reference.html">API Reference</a></td><td>REST endpoints, request/response schemas, curl examples</td></tr>
+        </tbody>
+      </table>
+
+      <div class="callout">
+        <strong>Next steps:</strong>
+        Read <a href="installation.html">Installation</a> for setup options,
+        then <a href="getting-started.html">Getting Started</a> to push your first report.
+        If you use Snapline already, jump to <a href="integration.html">Snapline Integration</a>.
+      </div>
+
+      <footer class="footer">
+        <p>
+          <a href="installation.html">Installation →</a> ·
+          <a href="getting-started.html">Getting Started →</a> ·
+          <a href="https://vaagatech.github.io/snapline/">Snapline (Node.js)</a> ·
+          <a href="https://vaagatech.github.io/snapline-python/">Snapline (Python)</a>
+        </p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

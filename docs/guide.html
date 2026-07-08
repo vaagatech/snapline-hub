@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>User Guide — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html" class="active">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>User Guide</h1>
+        <p class="lead">How to use the Snapline Hub web interface: dashboard, run history, uploads, run detail, and diff inspection.</p>
+      </header>
+
+      <h2>Navigation</h2>
+      <p>The sidebar has three main sections:</p>
+      <table>
+        <thead>
+          <tr><th>Page</th><th>URL path</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Dashboard</strong></td><td><code>/</code></td><td>Overview stats and recent runs</td></tr>
+          <tr><td><strong>All Runs</strong></td><td><code>/reports</code></td><td>Full history with pass/fail filters</td></tr>
+          <tr><td><strong>Upload Report</strong></td><td><code>/upload</code></td><td>Import JSON files manually</td></tr>
+          <tr><td><strong>Run Detail</strong></td><td><code>/reports/:id</code></td><td>Single run drill-down</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Dashboard</h2>
+      <p>The dashboard is the home page. It shows aggregate metrics across <em>all</em> stored reports:</p>
+      <ul>
+        <li><strong>Total Runs</strong> — number of ingested <code>TestRunReport</code> documents</li>
+        <li><strong>Suites Executed</strong> — sum of <code>summary.total</code> across all runs</li>
+        <li><strong>Passed / Failed</strong> — suite-level pass and fail counts</li>
+        <li><strong>Pass Rate</strong> — percentage of suites that passed</li>
+      </ul>
+      <p>The <strong>Recent Runs</strong> table lists the five most recent reports with:</p>
+      <ul>
+        <li>Run label (or truncated ID if no label)</li>
+        <li>Framework identifier (<code>@vaagatech/snapline-engine</code> or <code>snapline-engine</code>)</li>
+        <li>Suite count, pass/fail badge, duration, timestamp</li>
+      </ul>
+      <p>Click any run name to open its detail page. Use <strong>View all</strong> to go to the full run history.</p>
+
+      <h2>All Runs</h2>
+      <p>The run history page lists every stored report, newest first.</p>
+
+      <h3>Filtering</h3>
+      <p>Three filter tabs at the top:</p>
+      <table>
+        <thead>
+          <tr><th>Filter</th><th>Shows</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>All</strong></td><td>Every stored run</td></tr>
+          <tr><td><strong>Passed</strong></td><td>Runs where <code>summary.failed === 0</code> (all suites passed)</td></tr>
+          <tr><td><strong>Failed</strong></td><td>Runs with at least one failed suite</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Columns</h3>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Source</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Run</td><td><code>label</code> from push/upload, or <code>Run {id-prefix}</code></td></tr>
+          <tr><td>Framework</td><td><code>report.framework</code></td></tr>
+          <tr><td>Suites</td><td><code>summary.total</code></td></tr>
+          <tr><td>Passed / Failed</td><td><code>summary.passed</code> / <code>summary.failed</code></td></tr>
+          <tr><td>Date</td><td><code>generatedAt</code> (ISO timestamp)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Upload Report</h2>
+      <p>Use this page when you have an existing Snapline JSON report file and do not want to push programmatically.</p>
+
+      <h3>Accepted format</h3>
+      <p>The file must be a valid <code>TestRunReport</code> JSON object. Minimum required fields:</p>
+      <pre><code>{
+  "generatedAt": "2026-07-07T10:00:00.000Z",
+  "framework": "@vaagatech/snapline-engine",
+  "summary": { "total": 1, "passed": 1, "failed": 0 },
+  "suites": [
+    {
+      "name": "My suite",
+      "passed": true,
+      "results": [{ "step": "api", "passed": true }]
+    }
+  ]
+}</code></pre>
+
+      <h3>How to upload</h3>
+      <ol>
+        <li>Drag a <code>.json</code> file onto the drop zone, or click to open a file picker</li>
+        <li>Hub parses and validates the JSON</li>
+        <li>On success, the label defaults to the filename (without <code>.json</code>)</li>
+        <li>You are redirected to the run detail page</li>
+      </ol>
+
+      <h3>Common upload errors</h3>
+      <table>
+        <thead>
+          <tr><th>Error</th><th>Cause</th><th>Fix</th></tr>
+        </thead>
+        <tbody>
+          <tr><td>Invalid JSON</td><td>File is not valid JSON</td><td>Validate with <code>jq . file.json</code></td></tr>
+          <tr><td>Invalid TestRunReport</td><td>Missing <code>generatedAt</code>, <code>framework</code>, <code>summary</code>, or <code>suites</code></td><td>Ensure file was produced by <code>writeTestReport</code> with <code>format: 'json'</code></td></tr>
+          <tr><td>HTML file uploaded</td><td>Uploaded <code>.html</code> report instead of JSON</td><td>Use <code>REPORT_FORMAT=json</code> or convert is not supported — regenerate as JSON</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Run Detail</h2>
+      <p>Each stored report has a unique UUID. The detail page shows:</p>
+
+      <h3>Header</h3>
+      <ul>
+        <li>Run label and framework name</li>
+        <li>Generation timestamp</li>
+        <li><strong>Delete</strong> button — permanently removes the report from SQLite</li>
+      </ul>
+
+      <h3>Summary cards</h3>
+      <p>Total suites, passed count, failed count, and duration (<code>summary.durationMs</code>).</p>
+
+      <h3>Environment</h3>
+      <p>If the report includes an <code>environment</code> object (set via <code>buildReport</code> meta), each key-value pair is displayed — e.g. <code>baseUrl</code>, <code>reportFormat</code>, <code>suiteName</code>, CI build IDs you add yourself.</p>
+
+      <h3>Failures section</h3>
+      <p>When any step failed, a highlighted <strong>Failures</strong> section appears at the top listing every failed step across all suites, with full diff blocks. This lets you diagnose issues without expanding each suite manually.</p>
+
+      <h3>Suites</h3>
+      <p>Each suite is a collapsible card:</p>
+      <ul>
+        <li><strong>Suite name</strong> — from <code>TestSuiteResult.name</code></li>
+        <li><strong>Step counts</strong> — total, passed, failed</li>
+        <li><strong>PASSED / FAILED</strong> badge</li>
+      </ul>
+      <p>Failed suites are expanded by default. Passed suites are collapsed. Click the header to toggle.</p>
+
+      <h2>Understanding step results</h2>
+      <p>Each step in a suite maps to a <code>TestStepResult</code>:</p>
+      <table>
+        <thead>
+          <tr><th>Field</th><th>Meaning</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>step</code></td><td>Step or case identifier — e.g. <code>auth</code>, <code>api</code>, <code>01-pass-customer-account</code></td></tr>
+          <tr><td><code>passed</code></td><td>Whether this step succeeded</td></tr>
+          <tr><td><code>message</code></td><td>Human-readable outcome (optional)</td></tr>
+          <tr><td><code>diff</code></td><td>Structured mismatch on failure (see below)</td></tr>
+          <tr><td><code>processed</code></td><td>Live data after Snapline transforms (optional)</td></tr>
+          <tr><td><code>source</code> / <code>target</code></td><td>Cross-system comparison sides (DB↔API, etc.)</td></tr>
+        </tbody>
+      </table>
+
+      <h3>Fixture case semantics</h3>
+      <p>For <code>runApiFixtureCases</code> / <code>run_snapline_fixture_cases</code>:</p>
+      <ul>
+        <li><code>step</code> is the <strong>case directory name</strong> (e.g. <code>04-fail-segment-mapping</code>), not the human-readable <code>name</code> from <code>case.json</code></li>
+        <li>Cases with <code>expectMatch: false</code> <strong>pass</strong> when Snapline finds a mismatch — Hub shows them as passed steps</li>
+        <li>Auth failure cases (<code>expectStatus: 401</code>) pass when HTTP 401 is returned</li>
+      </ul>
+
+      <h2>Diff viewer</h2>
+      <p>When a step fails, Hub renders the Snapline <code>DiffResult</code>:</p>
+      <pre><code>{
+  "path": "segment",
+  "actual": "premium",
+  "expected": "standard",
+  "message": "Value mismatch"
+}</code></pre>
+      <ul>
+        <li><strong>path</strong> — dot-path to the first mismatch (depth-first). Nested fields use dots; array indices use brackets: <code>orders[0].status</code></li>
+        <li><strong>actual</strong> — value from the live/processed side after transforms</li>
+        <li><strong>expected</strong> — value from the expected fixture after <code>ignoreFields</code></li>
+        <li><strong>message</strong> — mismatch category: <code>Value mismatch</code>, <code>Type mismatch</code>, <code>Missing key</code>, etc.</li>
+      </ul>
+      <div class="callout warn">
+        <strong>Note:</strong> Snapline returns the <em>first</em> mismatch only, not a full diff tree. For row-level warehouse comparisons, see per-table step messages and optional JSONL stream reports in Snapline docs.
+      </div>
+
+      <h2>Labels</h2>
+      <p>Labels help identify runs in the UI. Set them when pushing:</p>
+      <pre><code>// Node.js
+await pushTestReportToHub(report, { hubUrl: '...', label: 'CI build #4821' });
+
+// Python
+push_test_report_to_hub(report, hub_url='...', label='CI build #4821')
+
+// Env
+SNAPLINE_HUB_LABEL="nightly-$(date +%Y%m%d)" SNAPLINE_HUB_URL=... npm run demo</code></pre>
+      <p>When uploading, the filename (without extension) becomes the label.</p>
+
+      <h2>Deleting reports</h2>
+      <p>On the run detail page, click <strong>Delete</strong> and confirm. This removes the report from SQLite permanently. There is no undo.</p>
+      <p>API equivalent: <code>DELETE /api/reports/:id</code> — see <a href="api-reference.html">API Reference</a>.</p>
+
+      <footer class="footer">
+        <p><a href="integration.html">Snapline Integration →</a> · <a href="api-reference.html">API Reference →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>
