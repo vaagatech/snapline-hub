@@ -3,6 +3,7 @@ import Sidebar from './components/Sidebar';
 import DashboardPage from './pages/DashboardPage';
 import ReportDetailPage from './pages/ReportDetailPage';
 import ReportsPage from './pages/ReportsPage';
+import SettingsPage from './pages/SettingsPage';
 import UploadPage from './pages/UploadPage';
 
 export default function App() {
@@ -19,6 +20,7 @@ export default function App() {
           <Route path="/reports" element={<ReportsPage />} />
           <Route path="/reports/:id" element={<ReportDetailPage />} />
           <Route path="/upload" element={<UploadPage />} />
+          <Route path="/settings" element={<SettingsPage />} />
         </Routes>
       </main>
     </div>

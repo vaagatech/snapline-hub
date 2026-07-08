@@ -1,0 +1,209 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Storage Adapters — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand hub" href="index.html">Snapline Hub</a>
+      <span class="brand-sub">by <a href="https://www.vaagatech.com">VaagaTech</a> · Reporting UI</span>
+      <nav class="nav">
+        <div class="nav-section">Documentation</div>
+        <a href="index.html">Overview</a>
+        <a href="installation.html">Installation</a>
+        <a href="getting-started.html">Getting Started</a>
+        <a href="guide.html">User Guide</a>
+        <a href="integration.html">Snapline Integration</a>
+        <a href="architecture.html">Architecture</a>
+        <a href="storage-adapters.html" class="active">Storage Adapters</a>
+        <a href="api-reference.html">API Reference</a>
+        <div class="nav-section">Snapline Ecosystem</div>
+        <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
+        <a href="https://vaagatech.github.io/snapline-python/">Python docs</a>
+        <div class="nav-section">Links</div>
+        <a href="https://github.com/vaagatech/snapline-hub">GitHub</a>
+        <a href="https://github.com/vaagatech/snapline">Snapline (Node.js)</a>
+        <a href="https://github.com/vaagatech/snapline-python">Snapline (Python)</a>
+      </nav>
+      <div class="sidebar-company">
+        Built by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a>.
+      </div>
+    </aside>
+    <main class="content">
+      <header class="hero">
+        <h1>Storage Adapters</h1>
+        <p class="lead">Snapline Hub uses a pluggable <code>ReportStore</code> interface. SQLite is the default for demos and local use; PostgreSQL and custom adapters are supported with minimal configuration.</p>
+      </header>
+
+      <div class="toc">
+        <strong>On this page</strong>
+        <ul>
+          <li><a href="#overview">Overview</a></li>
+          <li><a href="#built-in">Built-in adapters</a></li>
+          <li><a href="#configuration">Configuration</a></li>
+          <li><a href="#postgres">PostgreSQL</a></li>
+          <li><a href="#custom">Custom adapter</a></li>
+          <li><a href="#interface">ReportStore interface</a></li>
+          <li><a href="#schema">Shared schema</a></li>
+        </ul>
+      </div>
+
+      <h2 id="overview">Overview</h2>
+      <p>All report persistence goes through a single interface (<code>ReportStore</code>). The Express API, React UI, and Snapline push clients are storage-agnostic — they never import database drivers directly.</p>
+
+      <div class="diagram">┌─────────────────────────────────────────┐
+│  Express API (server/routes.ts)         │
+└──────────────────┬──────────────────────┘
+                   │ ReportStore
+       ┌───────────┼───────────┐
+       ▼           ▼           ▼
+  sqlite-adapter  postgres-adapter  your-adapter.js
+  (default)       (DATABASE_URL)    (custom module)</div>
+
+      <p>Shared logic (validation, filter parsing, SQL WHERE builders) lives in <code>server/storage/</code> so adapters stay thin.</p>
+
+      <h2 id="built-in">Built-in adapters</h2>
+      <table>
+        <thead>
+          <tr><th>Driver</th><th>Use case</th><th>Config</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>sqlite</code> (default)</td>
+            <td>Local dev, demos, single-node deploy</td>
+            <td><code>SNAPLINE_HUB_DB</code> file path</td>
+          </tr>
+          <tr>
+            <td><code>postgres</code></td>
+            <td>Team servers, managed DB, HA</td>
+            <td><code>DATABASE_URL</code> connection string</td>
+          </tr>
+          <tr>
+            <td><code>custom</code></td>
+            <td>MySQL, DynamoDB, S3, corporate DB</td>
+            <td><code>SNAPLINE_HUB_STORAGE_MODULE</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h2 id="configuration">Configuration</h2>
+      <table>
+        <thead>
+          <tr><th>Variable</th><th>Default</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><code>SNAPLINE_HUB_STORAGE</code></td>
+            <td><code>sqlite</code></td>
+            <td>Storage driver: <code>sqlite</code>, <code>postgres</code>, or <code>custom</code></td>
+          </tr>
+          <tr>
+            <td><code>SNAPLINE_HUB_DB</code></td>
+            <td><code>./data/snapline-hub.db</code></td>
+            <td>SQLite file path (sqlite driver)</td>
+          </tr>
+          <tr>
+            <td><code>DATABASE_URL</code></td>
+            <td><em>(unset)</em></td>
+            <td>PostgreSQL URL, e.g. <code>postgres://user:pass@host:5432/snapline_hub</code></td>
+          </tr>
+          <tr>
+            <td><code>SNAPLINE_HUB_STORAGE_MODULE</code></td>
+            <td><em>(unset)</em></td>
+            <td>Path to a module exporting <code>createReportStore(config)</code></td>
+          </tr>
+        </tbody>
+      </table>
+
+      <h3>SQLite (default — demos &amp; local)</h3>
+      <pre><code>npm run dev
+# or
+SNAPLINE_HUB_STORAGE=sqlite SNAPLINE_HUB_DB=./data/hub.db npm start</code></pre>
+
+      <h2 id="postgres">PostgreSQL</h2>
+      <pre><code># Create database
+createdb snapline_hub
+
+# Run Hub
+SNAPLINE_HUB_STORAGE=postgres \
+DATABASE_URL=postgres://localhost:5432/snapline_hub \
+npm start</code></pre>
+      <p>Schema and indexes are created automatically on first connect. The table layout mirrors SQLite for portability.</p>
+
+      <h2 id="custom">Custom adapter</h2>
+      <p>Implement <code>ReportStore</code> and point Hub at your module. Start from the example:</p>
+      <pre><code>cp server/storage/custom-adapter.example.ts my-company-adapter.mjs
+# edit my-company-adapter.mjs — implement createReportStore()</code></pre>
+
+      <pre><code>SNAPLINE_HUB_STORAGE=custom \
+SNAPLINE_HUB_STORAGE_MODULE=./my-company-adapter.mjs \
+npm start</code></pre>
+
+      <p>Your module must export:</p>
+      <pre><code>export function createReportStore(config) {
+  return {
+    driver: 'my-db',
+    insertReport(report, meta) { /* ... */ },
+    listReports(filters) { /* ... */ },
+    countReports(filters) { /* ... */ },
+    aggregateStats(filters) { /* ... */ },
+    getReport(id) { /* ... */ },
+    deleteReport(id) { /* ... */ },
+    getFacets(filters) { /* ... */ },
+    close() { /* ... */ },
+  };
+}</code></pre>
+
+      <div class="callout">
+        <strong>Tip:</strong> Reuse <code>server/storage/validation.ts</code> and <code>server/storage/query.ts</code> in SQL-based adapters. Methods may return values or Promises — the API layer handles both.
+      </div>
+
+      <h2 id="interface">ReportStore interface</h2>
+      <table>
+        <thead>
+          <tr><th>Method</th><th>Purpose</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>driver</code></td><td>Short name returned in <code>GET /api/health</code> as <code>storage</code></td></tr>
+          <tr><td><code>insertReport(report, meta?)</code></td><td>Persist a <code>TestRunReport</code>; return new UUID</td></tr>
+          <tr><td><code>listReports(filters?)</code></td><td>Paginated summaries, newest first</td></tr>
+          <tr><td><code>countReports(filters?)</code></td><td>Total matching rows (for pagination)</td></tr>
+          <tr><td><code>aggregateStats(filters?)</code></td><td>SUM of suite counts across all matching runs</td></tr>
+          <tr><td><code>getReport(id)</code></td><td>Full stored report including <code>report</code> JSON</td></tr>
+          <tr><td><code>deleteReport(id)</code></td><td>Remove by ID; return <code>true</code> if deleted</td></tr>
+          <tr><td><code>getFacets(filters?)</code></td><td>Project, tag, and framework counts for filter UI</td></tr>
+          <tr><td><code>close()</code></td><td>Release connections on shutdown</td></tr>
+        </tbody>
+      </table>
+
+      <h2 id="schema">Shared schema</h2>
+      <p>SQL adapters use a single <code>reports</code> table defined in <code>server/storage/schema.ts</code>:</p>
+      <table>
+        <thead>
+          <tr><th>Column</th><th>Description</th></tr>
+        </thead>
+        <tbody>
+          <tr><td><code>id</code></td><td>UUID primary key</td></tr>
+          <tr><td><code>generated_at</code></td><td>ISO timestamp from report</td></tr>
+          <tr><td><code>framework</code>, <code>label</code>, <code>project</code>, <code>tags</code></td><td>Metadata for filtering</td></tr>
+          <tr><td><code>total</code>, <code>passed</code>, <code>failed</code></td><td>Suite-level summary (denormalized)</td></tr>
+          <tr><td><code>duration_ms</code>, <code>environment</code></td><td>Optional run context</td></tr>
+          <tr><td><code>report_json</code></td><td>Full <code>TestRunReport</code> payload</td></tr>
+          <tr><td><code>created_at</code></td><td>Hub ingest timestamp</td></tr>
+        </tbody>
+      </table>
+
+      <p>Filter/query helpers in <code>buildFilterClause()</code> use <code>@named</code> placeholders — SQLite uses them natively; the PostgreSQL adapter converts to <code>$1</code>, <code>$2</code>.</p>
+
+      <footer class="footer">
+        <p><a href="architecture.html">← Architecture</a> · <a href="api-reference.html">API Reference →</a></p>
+        <p class="footer-muted">Snapline Hub by <a href="https://www.vaagatech.com" target="_blank" rel="noopener noreferrer">VaagaTech</a> · MIT License</p>
+      </footer>
+    </main>
+  </div>
+</body>
+</html>

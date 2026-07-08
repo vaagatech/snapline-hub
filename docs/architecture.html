@@ -19,6 +19,7 @@
         <a href="guide.html">User Guide</a>
         <a href="integration.html">Snapline Integration</a>
         <a href="architecture.html" class="active">Architecture</a>
+        <a href="storage-adapters.html">Storage Adapters</a>
         <a href="api-reference.html">API Reference</a>
         <div class="nav-section">Snapline Ecosystem</div>
         <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
@@ -67,7 +68,7 @@
         <li><strong>Optional</strong> — not bundled into Snapline npm/PyPI packages</li>
         <li><strong>Single application</strong> — one repo, one deployable unit (not split by language)</li>
         <li><strong>Schema-compatible</strong> — accepts the same <code>TestRunReport</code> from Node.js and Python</li>
-        <li><strong>Self-contained storage</strong> — SQLite, no Redis/Postgres dependency</li>
+        <li><strong>Pluggable storage</strong> — SQLite by default; PostgreSQL or custom adapters via <code>ReportStore</code> (see <a href="storage-adapters.html">Storage Adapters</a>)</li>
         <li><strong>Simple deployment</strong> — <code>npm run build &amp;&amp; npm start</code></li>
       </ul>
 
@@ -76,7 +77,8 @@
 ├── server/              # Express API (TypeScript)
 │   ├── index.ts         # App entry, static file serving
 │   ├── routes.ts        # REST route handlers
-│   ├── db.ts            # SQLite + validation
+│   ├── db.ts            # Storage factory re-exports
+│   ├── storage/         # ReportStore adapters (sqlite, postgres, custom)
 │   └── api.test.ts      # API integration tests
 ├── web/                 # React UI (Vite)
 │   ├── src/
@@ -98,13 +100,14 @@
         <tbody>
           <tr><td><code>server/index.ts</code></td><td>Creates Express app, mounts API router, serves <code>web/dist</code> in production</td></tr>
           <tr><td><code>server/routes.ts</code></td><td>REST endpoints: health, stats, reports CRUD</td></tr>
-          <tr><td><code>server/db.ts</code></td><td>SQLite schema, insert/list/get/delete, <code>validateTestRunReport()</code></td></tr>
+          <tr><td><code>server/db.ts</code></td><td>Storage factory; re-exports validation helpers</td></tr>
+          <tr><td><code>server/storage/</code></td><td><code>ReportStore</code> interface, SQLite/PostgreSQL adapters, query builders</td></tr>
           <tr><td><code>shared/types.ts</code></td><td>TypeScript interfaces aligned with Snapline core</td></tr>
         </tbody>
       </table>
 
       <h2>Database schema</h2>
-      <p>Single table <code>reports</code> in SQLite (WAL mode):</p>
+      <p>Single table <code>reports</code> — default backend is SQLite (WAL mode). PostgreSQL uses the same layout. See <a href="storage-adapters.html">Storage Adapters</a> for other backends.</p>
       <table>
         <thead>
           <tr><th>Column</th><th>Type</th><th>Description</th></tr>

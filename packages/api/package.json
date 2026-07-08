@@ -1,0 +1,42 @@
+{
+  "name": "@vaagatech/snapline-hub-api",
+  "version": "0.2.4",
+  "description": "Embeddable Express API for Snapline Hub test reporting",
+  "author": "VaagaTech (https://www.vaagatech.com)",
+  "license": "MIT",
+  "homepage": "https://vaagatech.github.io/snapline-hub/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaagatech/snapline-hub.git",
+    "directory": "packages/api"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "dependencies": {
+    "@vaagatech/snapline-hub-core": "0.2.4",
+    "better-sqlite3": "^11.9.1",
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "pg": "^8.16.0",
+    "uuid": "^11.1.0"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

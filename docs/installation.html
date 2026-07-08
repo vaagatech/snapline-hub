@@ -19,6 +19,7 @@
         <a href="guide.html">User Guide</a>
         <a href="integration.html">Snapline Integration</a>
         <a href="architecture.html">Architecture</a>
+        <a href="storage-adapters.html">Storage Adapters</a>
         <a href="api-reference.html">API Reference</a>
         <div class="nav-section">Snapline Ecosystem</div>
         <a href="https://vaagatech.github.io/snapline/">Node.js docs</a>
@@ -154,9 +155,24 @@ npm start</code></pre>
             <td>HTTP port for the API and (in production) the static UI.</td>
           </tr>
           <tr>
+            <td><code>SNAPLINE_HUB_STORAGE</code></td>
+            <td><code>sqlite</code></td>
+            <td>Storage driver: <code>sqlite</code>, <code>postgres</code>, or <code>custom</code>. See <a href="storage-adapters.html">Storage Adapters</a>.</td>
+          </tr>
+          <tr>
             <td><code>SNAPLINE_HUB_DB</code></td>
             <td><code>./data/snapline-hub.db</code></td>
-            <td>Path to the SQLite database file. Parent directories are created automatically.</td>
+            <td>SQLite file path (when <code>SNAPLINE_HUB_STORAGE=sqlite</code>).</td>
+          </tr>
+          <tr>
+            <td><code>DATABASE_URL</code></td>
+            <td><em>(unset)</em></td>
+            <td>PostgreSQL connection string (when <code>SNAPLINE_HUB_STORAGE=postgres</code>).</td>
+          </tr>
+          <tr>
+            <td><code>SNAPLINE_HUB_STORAGE_MODULE</code></td>
+            <td><em>(unset)</em></td>
+            <td>Path to custom adapter module (when <code>SNAPLINE_HUB_STORAGE=custom</code>).</td>
           </tr>
           <tr>
             <td><code>HOST</code></td>

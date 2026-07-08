@@ -74,6 +74,8 @@ export interface IngestResponse {
 
 export interface ReportFilters {
   project?: string;
+  /** When set, restrict to these project ids (RBAC). */
+  projects?: string[];
   tags?: string[];
   /** When multiple tags are selected: 'any' (default) = OR, 'all' = AND */
   tagMode?: 'any' | 'all';
@@ -107,4 +109,31 @@ export interface StatsResponse {
   projects: FacetItem[];
   tags: FacetItem[];
   recentRuns: ReportSummary[];
+  projectSummaries: ProjectSummary[];
+  runTrend: RunTrendPoint[];
+}
+
+/** Per-project rollup for the dashboard. */
+export interface ProjectSummary {
+  project: string;
+  totalRuns: number;
+  passRate: number;
+  lastRun: ReportSummary;
+}
+
+export interface RunTrendPoint {
+  date: string;
+  passed: number;
+  failed: number;
+  total: number;
+}
+
+export interface AuthMeResponse {
+  id: string;
+  type: string;
+  displayName: string;
+  isAdmin: boolean;
+  rbacEnabled: boolean;
+  permissions: string[];
+  accessibleProjects: string[] | '*';
 }

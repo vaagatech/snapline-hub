@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deployment — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand hub" href="index.html">Snapline Hub</a>
+      <nav class="nav">
+        <a href="security-rbac.html">Security &amp; RBAC</a>
+        <a href="embedding.html">Embedding UI &amp; API</a>
+        <a href="deployment.html" class="active">Deployment</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <h1>Deployment modes</h1>
+
+      <h2>1. Combined Docker (API + UI)</h2>
+      <pre><code>docker build -t snapline-hub:0.2.4 .
+docker run -p 3847:3847 \
+  -e HUB_ADMINS=admin@local \
+  -e HUB_RBAC_ENABLED=true \
+  -v hub-data:/app/data \
+  snapline-hub:0.2.4</code></pre>
+
+      <h2>2. Separate SPA + API</h2>
+      <p>Build the UI (<code>npm run build:web</code>) and host <code>web/dist</code> on any static host. Run the API with <code>npm start</code> and set <code>ALLOWED_ORIGINS</code> to your SPA origin. Point the SPA at the API with <code>HubApp apiBase</code> or <code>VITE_API_PROXY</code> during dev.</p>
+
+      <h2>3. Embedded packages</h2>
+      <p>Install <code>@vaagatech/snapline-hub-api</code> and/or <code>@vaagatech/snapline-hub-ui</code> in your application — see <a href="embedding.html">embedding guide</a>.</p>
+
+      <h2>4. Monorepo app (this repository)</h2>
+      <p>The root <code>snapline-hub</code> workspace is the reference app using <code>server/</code> + <code>web/</code> directly. Packages under <code>packages/</code> are what get published to npm.</p>
+
+      <h2>Storage</h2>
+      <p>Default SQLite path: <code>./data/snapline-hub.db</code>. For Postgres set <code>SNAPLINE_HUB_STORAGE=postgres</code> and <code>DATABASE_URL</code>. See <a href="storage-adapters.html">storage adapters</a>.</p>
+    </main>
+  </div>
+</body>
+</html>

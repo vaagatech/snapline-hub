@@ -1,4 +1,4 @@
-import { afterAll, beforeAll, describe, expect, it } from 'vitest';
+import { afterAll, afterEach, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -47,6 +47,7 @@ describe('Snapline Hub API', () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
     expect(res.body.status).toBe('ok');
+    expect(res.body.storage).toBe('sqlite');
   });
 
   it('ingests a TestRunReport', async () => {
@@ -147,6 +148,8 @@ describe('Snapline Hub API', () => {
     expect(res.body.totalRuns).toBeGreaterThan(0);
     expect(res.body.projects).toBeDefined();
     expect(res.body.tags).toBeDefined();
+    expect(res.body.projectSummaries).toBeDefined();
+    expect(res.body.runTrend).toBeDefined();
   });
 
   it('deletes a report', async () => {
@@ -212,10 +215,13 @@ describe('Snapline Hub API — API key auth', () => {
   const tempDir = mkdtempSync(join(tmpdir(), 'snapline-hub-auth-'));
   const dbPath = join(tempDir, 'auth.db');
   const originalKey = process.env.HUB_API_KEY;
+  const originalRbac = process.env.HUB_RBAC_ENABLED;
   let app: ReturnType<typeof createApp>['app'];
   let database: ReturnType<typeof createApp>['database'];
 
   beforeAll(() => {
+    delete process.env.HUB_RBAC_ENABLED;
+    delete process.env.HUB_ADMINS;
     process.env.HUB_API_KEY = 'test-secret-key';
     const created = createApp({ dbPath });
     app = created.app;
@@ -229,6 +235,11 @@ describe('Snapline Hub API — API key auth', () => {
       delete process.env.HUB_API_KEY;
     } else {
       process.env.HUB_API_KEY = originalKey;
+    }
+    if (originalRbac === undefined) {
+      delete process.env.HUB_RBAC_ENABLED;
+    } else {
+      process.env.HUB_RBAC_ENABLED = originalRbac;
     }
   });
 
@@ -248,5 +259,101 @@ describe('Snapline Hub API — API key auth', () => {
   it('allows GET without API key', async () => {
     const res = await request(app).get('/api/health');
     expect(res.status).toBe(200);
+  });
+});
+
+describe('Snapline Hub API — RBAC', () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'snapline-hub-rbac-'));
+  const dbPath = join(tempDir, 'rbac.db');
+  const envBackup = {
+    HUB_RBAC_ENABLED: process.env.HUB_RBAC_ENABLED,
+    HUB_ADMINS: process.env.HUB_ADMINS,
+    HUB_RBAC_API_KEYS: process.env.HUB_RBAC_API_KEYS,
+    HUB_API_KEY: process.env.HUB_API_KEY,
+  };
+
+  afterEach(() => {
+    for (const [key, value] of Object.entries(envBackup)) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  });
+
+  afterAll(() => {
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('returns auth/me for admin user header', async () => {
+    process.env.HUB_ADMINS = 'admin@local';
+    delete process.env.HUB_API_KEY;
+    const { app, database } = createApp({ dbPath });
+    try {
+      const res = await request(app)
+        .get('/api/auth/me')
+        .set('X-Hub-User', 'admin@local');
+      expect(res.status).toBe(200);
+      expect(res.body.isAdmin).toBe(true);
+      expect(res.body.permissions).toContain('admin:settings');
+    } finally {
+      database.close();
+    }
+  });
+
+  it('denies report ingest for viewer role', async () => {
+    process.env.HUB_RBAC_ENABLED = 'true';
+    process.env.HUB_RBAC_API_KEYS = JSON.stringify({
+      keys: { 'viewer-key': { role: 'viewer', projects: ['allowed-project'] } },
+    });
+    const { app, database } = createApp({ dbPath });
+    try {
+      const denied = await request(app)
+        .post('/api/reports?project=allowed-project')
+        .set('X-Hub-Api-Key', 'viewer-key')
+        .send(sampleReport);
+      expect(denied.status).toBe(403);
+    } finally {
+      database.close();
+    }
+  });
+
+  it('allows automation key to ingest reports', async () => {
+    process.env.HUB_RBAC_ENABLED = 'true';
+    process.env.HUB_RBAC_API_KEYS = JSON.stringify({
+      keys: { 'auto-key': { role: 'automation', projects: ['*'], label: 'CI' } },
+    });
+    const { app, database } = createApp({ dbPath });
+    try {
+      const res = await request(app)
+        .post('/api/reports?project=ci-project')
+        .set('X-Hub-Api-Key', 'auto-key')
+        .send(sampleReport);
+      expect(res.status).toBe(201);
+    } finally {
+      database.close();
+    }
+  });
+});
+
+describe('Snapline Hub API — custom storage adapter', () => {
+  it('loads the example in-memory adapter via factory', async () => {
+    const { createReportStore } = await import('../server/storage/factory.js');
+    const store = await createReportStore({
+      driver: 'custom',
+      customModule: './server/storage/custom-adapter.example.ts',
+    });
+    const { app, database } = createApp({ store });
+
+    try {
+      const ingest = await request(app)
+        .post('/api/reports')
+        .send(sampleReport);
+      expect(ingest.status).toBe(201);
+
+      const health = await request(app).get('/api/health');
+      expect(health.body.storage).toBe('custom-example');
+      expect(health.body.reports).toBe(1);
+    } finally {
+      await Promise.resolve(database.close());
+    }
   });
 });

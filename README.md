@@ -18,6 +18,7 @@ Snapline Hub stores and visualizes `TestRunReport` data from Node.js or Python t
 | [User Guide](https://vaagatech.github.io/snapline-hub/guide.html) | Dashboard, uploads, diff viewer |
 | [Snapline Integration](https://vaagatech.github.io/snapline-hub/integration.html) | Node.js & Python push APIs, CI |
 | [Architecture](https://vaagatech.github.io/snapline-hub/architecture.html) | Components, data model, storage |
+| [Storage Adapters](https://vaagatech.github.io/snapline-hub/storage-adapters.html) | SQLite, PostgreSQL, custom backends |
 | [API Reference](https://vaagatech.github.io/snapline-hub/api-reference.html) | REST endpoints |
 
 **Related Snapline documentation:**
@@ -54,7 +55,7 @@ See [Getting Started](https://vaagatech.github.io/snapline-hub/getting-started.h
 - **Diff viewer** — structured mismatch display (`path`, `actual`, `expected`)
 - **Upload** — drag-and-drop JSON `TestRunReport` files
 - **Push API** — ingest reports from Snapline test runners via HTTP
-- **SQLite storage** — local persistence, no external database required
+- **Pluggable storage** — SQLite by default; PostgreSQL or custom adapters via `ReportStore`
 
 ## Development
 

@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Security &amp; RBAC — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand hub" href="index.html">Snapline Hub</a>
+      <nav class="nav">
+        <a href="security-rbac.html" class="active">Security &amp; RBAC</a>
+        <a href="embedding.html">Embedding UI &amp; API</a>
+        <a href="deployment.html">Deployment</a>
+        <a href="api-reference.html">API Reference</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <h1>Security &amp; RBAC</h1>
+      <p>Snapline Hub supports optional role-based access control (RBAC). When disabled, behavior matches earlier releases (open read, optional <code>HUB_API_KEY</code> on writes).</p>
+
+      <h2>Roles</h2>
+      <table>
+        <thead><tr><th>Role</th><th>Permissions</th></tr></thead>
+        <tbody>
+          <tr><td><code>admin</code></td><td>Full access + Settings page + RBAC management</td></tr>
+          <tr><td><code>project_admin</code></td><td>Read/write/delete reports for assigned project(s)</td></tr>
+          <tr><td><code>viewer</code></td><td>Read reports for assigned project(s)</td></tr>
+          <tr><td><code>automation</code></td><td>Read + ingest reports (CI/scripts)</td></tr>
+        </tbody>
+      </table>
+
+      <h2>Environment variables</h2>
+      <pre><code>HUB_RBAC_ENABLED=true
+HUB_ADMINS=admin@company.com,ops@company.com
+HUB_ADMIN_API_KEYS=super-secret-admin-key
+HUB_PUBLIC_READ=false
+HUB_RBAC_API_KEYS={"keys":{"ci-bot":{"role":"automation","projects":["*"],"label":"CI pipeline"}}}</code></pre>
+
+      <h2>Request headers</h2>
+      <ul>
+        <li><code>X-Hub-Api-Key</code> — API key (admin, automation, or legacy ingest)</li>
+        <li><code>X-Hub-User</code> — user id/email for UI embedding (e.g. <code>alice@company.com</code>)</li>
+        <li><code>X-Hub-Automation</code> — automation script id (paired with DB assignments)</li>
+      </ul>
+
+      <h2>Project-scoped assignments</h2>
+      <p>Admins manage database assignments on the <strong>Settings</strong> page or via <code>GET/POST/DELETE /api/admin/rbac</code>. Omit <code>project</code> or use <code>*</code> for all projects.</p>
+
+      <h2>Automation RBAC</h2>
+      <p>CI pipelines should use <code>automation</code> role keys via <code>HUB_RBAC_API_KEYS</code> or DB assignments with principal <code>automation:my-script</code> and header <code>X-Hub-Automation: my-script</code>.</p>
+    </main>
+  </div>
+</body>
+</html>

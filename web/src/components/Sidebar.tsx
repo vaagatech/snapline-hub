@@ -1,4 +1,6 @@
 import { NavLink } from 'react-router-dom';
+import PreferencesPanel from './PreferencesPanel';
+import { useAuth } from '../context/AuthContext';
 
 function IconDashboard() {
   return (
@@ -28,6 +30,15 @@ function IconUpload() {
   );
 }
 
+function IconSettings() {
+  return (
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <circle cx="12" cy="12" r="3" />
+      <path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42" strokeLinecap="round" />
+    </svg>
+  );
+}
+
 function IconExternal() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
@@ -40,6 +51,9 @@ const navLinkClass = ({ isActive }: { isActive: boolean }) =>
   `nav-item${isActive ? ' active' : ''}`;
 
 export default function Sidebar() {
+  const { isAdmin, can } = useAuth();
+  const showSettings = isAdmin && can('admin:settings');
+
   return (
     <aside className="sidebar">
       <div className="sidebar-header">
@@ -69,8 +83,16 @@ export default function Sidebar() {
             <IconUpload />
             <span>Import report</span>
           </NavLink>
+          {showSettings && (
+            <NavLink to="/settings" className={navLinkClass}>
+              <IconSettings />
+              <span>Settings</span>
+            </NavLink>
+          )}
         </div>
       </nav>
+
+      <PreferencesPanel />
 
       <div className="sidebar-footer">
         <span className="nav-group-label">Snapline framework</span>

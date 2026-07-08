@@ -22,6 +22,7 @@ https://vaagatech.github.io/snapline-hub/
 | [guide.html](guide.html) | UI guide: search, quick filters, projects & tags |
 | [integration.html](integration.html) | Node.js and Python push APIs |
 | [architecture.html](architecture.html) | Components and data model |
+| [storage-adapters.html](storage-adapters.html) | SQLite, PostgreSQL, custom storage |
 | [api-reference.html](api-reference.html) | REST API including `/api/facets` |
 
 Styling: [assets/style.css](assets/style.css) — shared design with Snapline docs.

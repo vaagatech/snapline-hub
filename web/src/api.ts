@@ -1,4 +1,5 @@
 import type {
+  AuthMeResponse,
   ReportFacets,
   ReportFilters,
   ReportIngestMeta,
@@ -7,8 +8,9 @@ import type {
   StoredReport,
   TestRunReport,
 } from '@shared/types';
+import { enrichDashboardStats } from './lib/dashboard-stats';
+import { getHubClientConfig, hubAuthHeaders } from './lib/hub-client';
 
-const API_BASE = '/api';
 const PAGE_SIZE = 50;
 
 export type { ReportFacets, ReportFilters, StatsResponse };
@@ -38,8 +40,13 @@ function toQueryString(filters: ReportFilters): string {
 }
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
-  const response = await fetch(`${API_BASE}${path}`, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
+  const { apiBase } = getHubClientConfig();
+  const response = await fetch(`${apiBase}${path}`, {
+    headers: {
+      'Content-Type': 'application/json',
+      ...hubAuthHeaders(),
+      ...options?.headers,
+    },
     ...options,
   });
   if (!response.ok) {
@@ -54,6 +61,27 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 export function fetchStats(filters: ReportFilters = {}, signal?: AbortSignal): Promise<StatsResponse> {
   return request<StatsResponse>(`/stats${toQueryString(filters)}`, { signal });
+}
+
+/** Stats enriched with projectSummaries + runTrend (works with older API builds). */
+export async function fetchDashboardStats(signal?: AbortSignal): Promise<StatsResponse> {
+  const stats = await fetchStats({}, signal);
+  const needsEnrichment =
+    !stats.projectSummaries?.length ||
+    !stats.runTrend?.length ||
+    stats.projectSummaries === undefined ||
+    stats.runTrend === undefined;
+
+  if (!needsEnrichment) {
+    return stats;
+  }
+
+  const list = await request<ReportsListResponse>(
+    `/reports${toQueryString({ limit: 200 })}`,
+    { signal },
+  );
+
+  return enrichDashboardStats(stats, list.reports);
 }
 
 export function fetchFacets(
@@ -86,6 +114,38 @@ export function ingestReport(
 
 export function deleteReport(id: string): Promise<void> {
   return request(`/reports/${id}`, { method: 'DELETE' });
+}
+
+export function fetchAuthMe(signal?: AbortSignal): Promise<AuthMeResponse> {
+  return request<AuthMeResponse>('/auth/me', { signal });
+}
+
+export interface RbacAssignmentsResponse {
+  assignments: Array<{
+    id: string;
+    principal: string;
+    project?: string;
+    role: string;
+    label?: string;
+    createdAt: string;
+  }>;
+}
+
+export function fetchRbacAssignments(signal?: AbortSignal): Promise<RbacAssignmentsResponse> {
+  return request<RbacAssignmentsResponse>('/admin/rbac', { signal });
+}
+
+export function createRbacAssignment(body: {
+  principal: string;
+  project?: string;
+  role: string;
+  label?: string;
+}): Promise<unknown> {
+  return request('/admin/rbac', { method: 'POST', body: JSON.stringify(body) });
+}
+
+export function deleteRbacAssignment(id: string): Promise<void> {
+  return request(`/admin/rbac/${id}`, { method: 'DELETE' });
 }
 
 export function filtersFromSearchParams(params: URLSearchParams): ReportFilters {

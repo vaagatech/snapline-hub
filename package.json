@@ -1,25 +1,35 @@
 {
   "name": "snapline-hub",
-  "version": "0.2.3",
+  "version": "0.2.4",
   "description": "Optional reporting UI for Snapline test execution results",
   "type": "module",
-  "license": "MIT",
+  "private": true,
+  "workspaces": [
+    "packages/*"
+  ],
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:web\"",
     "dev:server": "tsx watch server/index.ts",
     "dev:web": "vite --config web/vite.config.ts",
-    "build": "npm run build:web && npm run build:server",
+    "build": "npm run build:packages && npm run build:web && npm run build:server",
+    "build:packages": "npm run build -w @vaagatech/snapline-hub-core",
     "build:web": "vite build --config web/vite.config.ts",
     "build:server": "tsc -p tsconfig.server.json",
+    "build:ui-package": "npm run build -w @vaagatech/snapline-hub-ui",
+    "build:api-package": "npm run build -w @vaagatech/snapline-hub-api",
     "start": "node dist/server/index.js",
     "seed:demos": "tsx scripts/seed-demos.ts",
-    "test": "vitest run",
-    "typecheck": "tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit"
+    "test": "vitest run --config vitest.config.ts",
+    "typecheck": "npm run build:packages && tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
+    "sync-versions": "node scripts/sync-versions.mjs",
+    "publish:packages": "npm run build:packages && npm run build:api-package && npm run build:ui-package && npm publish -w @vaagatech/snapline-hub-core && npm publish -w @vaagatech/snapline-hub-api && npm publish -w @vaagatech/snapline-hub-ui"
   },
   "dependencies": {
+    "@vaagatech/snapline-hub-core": "0.2.4",
     "better-sqlite3": "^11.9.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
+    "pg": "^8.16.0",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
@@ -27,6 +37,7 @@
     "@types/cors": "^2.8.17",
     "@types/express": "^5.0.1",
     "@types/node": "^22.14.1",
+    "@types/pg": "^8.15.2",
     "@types/react": "^19.1.2",
     "@types/react-dom": "^19.1.2",
     "@types/supertest": "^6.0.3",

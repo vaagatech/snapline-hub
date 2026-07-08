@@ -1,0 +1,34 @@
+{
+  "name": "@vaagatech/snapline-hub-core",
+  "version": "0.2.4",
+  "description": "RBAC, auth config, and shared primitives for Snapline Hub",
+  "author": "VaagaTech (https://www.vaagatech.com)",
+  "license": "MIT",
+  "homepage": "https://vaagatech.github.io/snapline-hub/",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vaagatech/snapline-hub.git",
+    "directory": "packages/core"
+  },
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": ["dist", "README.md"],
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "typecheck": "tsc -p tsconfig.json --noEmit"
+  },
+  "publishConfig": {
+    "access": "public",
+    "registry": "https://registry.npmjs.org/"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

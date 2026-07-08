@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Embedding UI &amp; API — Snapline Hub</title>
+  <link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <a class="brand hub" href="index.html">Snapline Hub</a>
+      <nav class="nav">
+        <a href="security-rbac.html">Security &amp; RBAC</a>
+        <a href="embedding.html" class="active">Embedding UI &amp; API</a>
+        <a href="deployment.html">Deployment</a>
+      </nav>
+    </aside>
+    <main class="content">
+      <h1>Embedding UI &amp; API</h1>
+      <p>Snapline Hub ships as separate npm packages so you can embed the dashboard in an existing app or mount the API under a path prefix.</p>
+
+      <h2>npm packages (v0.2.4)</h2>
+      <ul>
+        <li><code>@vaagatech/snapline-hub-core</code> — RBAC engine</li>
+        <li><code>@vaagatech/snapline-hub-api</code> — Express API (<code>createApp</code>)</li>
+        <li><code>@vaagatech/snapline-hub-ui</code> — React <code>HubApp</code> component</li>
+        <li><code>snapline-hub</code> (Python) — HTTP client with RBAC headers</li>
+      </ul>
+
+      <h2>Embed React UI</h2>
+      <pre><code>import { HubApp } from '@vaagatech/snapline-hub-ui';
+import '@vaagatech/snapline-hub-ui/style.css';
+
+export function QualityDashboard() {
+  return (
+    &lt;HubApp
+      apiBase="https://hub.example.com/api"
+      basename="/quality"
+      user="alice@company.com"
+    /&gt;
+  );
+}</code></pre>
+
+      <h2>Mount API in Express</h2>
+      <pre><code>import express from 'express';
+import { createApp } from '@vaagatech/snapline-hub-api';
+
+const main = express();
+const hub = createApp({ webDist: undefined });
+main.use('/test-hub', hub.app);
+main.listen(3000);</code></pre>
+
+      <h2>Python client</h2>
+      <pre><code>pip install snapline-hub
+from snapline_hub import HubClient
+
+client = HubClient.from_env()
+client.ingest_report(report, project="my-app")</code></pre>
+    </main>
+  </div>
+</body>
+</html>
