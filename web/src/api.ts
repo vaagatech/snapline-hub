@@ -9,6 +9,7 @@ import type {
 } from '@shared/types';
 
 const API_BASE = '/api';
+const PAGE_SIZE = 50;
 
 export type { ReportFacets, ReportFilters, StatsResponse };
 
@@ -51,20 +52,26 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
   return response.json() as Promise<T>;
 }
 
-export function fetchStats(filters: ReportFilters = {}): Promise<StatsResponse> {
-  return request<StatsResponse>(`/stats${toQueryString(filters)}`);
+export function fetchStats(filters: ReportFilters = {}, signal?: AbortSignal): Promise<StatsResponse> {
+  return request<StatsResponse>(`/stats${toQueryString(filters)}`, { signal });
 }
 
-export function fetchFacets(filters: Pick<ReportFilters, 'project' | 'from' | 'to'> = {}): Promise<ReportFacets> {
-  return request<ReportFacets>(`/facets${toQueryString(filters)}`);
+export function fetchFacets(
+  filters: Pick<ReportFilters, 'project' | 'from' | 'to'> = {},
+  signal?: AbortSignal,
+): Promise<ReportFacets> {
+  return request<ReportFacets>(`/facets${toQueryString(filters)}`, { signal });
 }
 
-export function fetchReports(filters: ReportFilters = {}): Promise<ReportsListResponse> {
-  return request<ReportsListResponse>(`/reports${toQueryString({ limit: 200, ...filters })}`);
+export function fetchReports(filters: ReportFilters = {}, signal?: AbortSignal): Promise<ReportsListResponse> {
+  return request<ReportsListResponse>(
+    `/reports${toQueryString({ limit: PAGE_SIZE, ...filters })}`,
+    { signal },
+  );
 }
 
-export function fetchReport(id: string): Promise<StoredReport> {
-  return request<StoredReport>(`/reports/${id}`);
+export function fetchReport(id: string, signal?: AbortSignal): Promise<StoredReport> {
+  return request<StoredReport>(`/reports/${id}`, { signal });
 }
 
 export function ingestReport(
@@ -91,6 +98,7 @@ export function filtersFromSearchParams(params: URLSearchParams): ReportFilters 
   const search = params.get('search');
   const tags = params.get('tags');
   const tagMode = params.get('tagMode');
+  const offset = params.get('offset');
 
   if (project) filters.project = project;
   if (framework) filters.framework = framework;
@@ -100,6 +108,7 @@ export function filtersFromSearchParams(params: URLSearchParams): ReportFilters 
   if (search) filters.search = search;
   if (tags) filters.tags = tags.split(',').filter(Boolean);
   if (tagMode === 'all') filters.tagMode = 'all';
+  if (offset) filters.offset = Number(offset);
 
   return filters;
 }
@@ -114,5 +123,8 @@ export function searchParamsFromFilters(filters: ReportFilters): URLSearchParams
   if (filters.search) params.set('search', filters.search);
   if (filters.tags?.length) params.set('tags', filters.tags.join(','));
   if (filters.tagMode === 'all') params.set('tagMode', 'all');
+  if (filters.offset) params.set('offset', String(filters.offset));
   return params;
 }
+
+export { PAGE_SIZE };

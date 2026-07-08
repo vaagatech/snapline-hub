@@ -304,13 +304,18 @@
 }</code></pre>
 
       <h2>Request size</h2>
-      <p>JSON body limit is <strong>50 MB</strong>. Large warehouse comparison reports should use Snapline's JSONL stream format locally; Hub is optimized for standard <code>TestRunReport</code> payloads.</p>
+      <p>JSON body limit is <strong>10 MB</strong>. Reports are capped at 500 suites and 1000 steps per suite. Large warehouse comparison reports should use Snapline's JSONL stream format locally; Hub is optimized for standard <code>TestRunReport</code> payloads.</p>
 
       <h2>CORS</h2>
-      <p>CORS is enabled for all origins by default, allowing the Vite dev server to call the API. In production behind a reverse proxy, restrict origins at the proxy layer if needed.</p>
+      <p>CORS allows <code>localhost:5173</code> and <code>localhost:3847</code> by default. Set <code>ALLOWED_ORIGINS</code> to a comma-separated list when the UI is served from other hosts.</p>
 
       <h2>Authentication</h2>
-      <p>Hub does not implement authentication. Deploy behind a VPN, reverse proxy with auth, or internal network. Do not expose an unauthenticated Hub instance to the public internet.</p>
+      <p>When <code>HUB_API_KEY</code> is set, mutating endpoints require the <code>X-Hub-Api-Key</code> request header:</p>
+      <pre><code>curl -X POST http://localhost:3847/api/reports \
+  -H "Content-Type: application/json" \
+  -H "X-Hub-Api-Key: your-secret-key" \
+  -d @report.json</code></pre>
+      <p>GET endpoints (list, detail, stats, facets, health) remain public. For broader protection, deploy behind a VPN, reverse proxy with auth, or internal network.</p>
 
       <footer class="footer">
         <p><a href="architecture.html">Architecture →</a> · <a href="integration.html">Snapline Integration →</a></p>

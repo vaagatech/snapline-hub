@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { fetchStats, searchParamsFromFilters, type StatsResponse } from '../api';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString(undefined, {
@@ -19,21 +20,27 @@ function formatDuration(ms?: number): string {
 }
 
 export default function DashboardPage() {
+  usePageTitle('Dashboard');
   const [stats, setStats] = useState<StatsResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchStats()
+    const controller = new AbortController();
+    fetchStats({}, controller.signal)
       .then(setStats)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load stats'));
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : 'Failed to load stats');
+      });
+    return () => controller.abort();
   }, []);
 
   if (error) {
-    return <div className="error">{error}</div>;
+    return <div className="error" role="alert">{error}</div>;
   }
 
   if (!stats) {
-    return <div className="loading">Loading dashboard…</div>;
+    return <div className="loading" role="status" aria-live="polite">Loading dashboard…</div>;
   }
 
   return (
@@ -124,48 +131,50 @@ export default function DashboardPage() {
               <code>SNAPLINE_HUB_URL</code>.
             </div>
           ) : (
-            <table className="table">
-              <thead>
-                <tr>
-                  <th>Run</th>
-                  <th>Project</th>
-                  <th>Tags</th>
-                  <th>Result</th>
-                  <th>Duration</th>
-                  <th>Date</th>
-                </tr>
-              </thead>
-              <tbody>
-                {stats.recentRuns.map((run) => (
-                  <tr key={run.id}>
-                    <td>
-                      <Link to={`/reports/${run.id}`}>
-                        {run.label ?? run.id.slice(0, 8)}
-                      </Link>
-                    </td>
-                    <td>{run.project ?? '—'}</td>
-                    <td>
-                      {run.tags.length > 0 ? (
-                        <span className="inline-tags">
-                          {run.tags.map((tag) => (
-                            <span key={tag} className="tag-chip small">{tag}</span>
-                          ))}
-                        </span>
-                      ) : '—'}
-                    </td>
-                    <td>
-                      {run.failed === 0 ? (
-                        <span className="badge pass">All passed</span>
-                      ) : (
-                        <span className="badge fail">{run.failed} failed</span>
-                      )}
-                    </td>
-                    <td>{formatDuration(run.durationMs)}</td>
-                    <td>{formatDate(run.generatedAt)}</td>
+            <div className="table-scroll">
+              <table className="table">
+                <thead>
+                  <tr>
+                    <th scope="col">Run</th>
+                    <th scope="col">Project</th>
+                    <th scope="col">Tags</th>
+                    <th scope="col">Result</th>
+                    <th scope="col">Duration</th>
+                    <th scope="col">Date</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {stats.recentRuns.map((run) => (
+                    <tr key={run.id}>
+                      <td>
+                        <Link to={`/reports/${run.id}`}>
+                          {run.label ?? run.id.slice(0, 8)}
+                        </Link>
+                      </td>
+                      <td>{run.project ?? '—'}</td>
+                      <td>
+                        {run.tags.length > 0 ? (
+                          <span className="inline-tags">
+                            {run.tags.map((tag) => (
+                              <span key={tag} className="tag-chip small">{tag}</span>
+                            ))}
+                          </span>
+                        ) : '—'}
+                      </td>
+                      <td>
+                        {run.failed === 0 ? (
+                          <span className="badge pass">All passed</span>
+                        ) : (
+                          <span className="badge fail">{run.failed} failed</span>
+                        )}
+                      </td>
+                      <td>{formatDuration(run.durationMs)}</td>
+                      <td>{formatDate(run.generatedAt)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>

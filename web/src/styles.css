@@ -411,6 +411,7 @@ a:hover {
 }
 
 .suite-header {
+  width: 100%;
   padding: 1rem 1.25rem;
   display: flex;
   align-items: center;
@@ -418,10 +419,20 @@ a:hover {
   gap: 1rem;
   cursor: pointer;
   user-select: none;
+  background: transparent;
+  border: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
 }
 
 .suite-header:hover {
   background: var(--bg-hover);
+}
+
+.suite-header:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .suite-name {
@@ -946,6 +957,75 @@ a:hover {
   padding: 0.35rem 0.75rem;
   font-size: 0.8rem;
   align-self: flex-start;
+}
+
+/* ── Accessibility ── */
+
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0.5rem;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: #fff;
+  border-radius: var(--radius-sm);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.skip-link:focus {
+  left: 0.5rem;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+button:focus:not(:focus-visible),
+a:focus:not(:focus-visible) {
+  outline: none;
+}
+
+/* ── Tables & pagination ── */
+
+.table-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border-subtle);
+}
+
+.pagination-info {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.filters-error {
+  font-size: 0.8rem;
+  color: var(--warn);
+  margin-top: 0.5rem;
 }
 
 @media (max-width: 768px) {

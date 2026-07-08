@@ -1,16 +1,25 @@
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { TestRunReport } from '@shared/types';
 import { ingestReport } from '../api';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 export default function UploadPage() {
+  usePageTitle('Import report');
   const navigate = useNavigate();
+  const navigateTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [dragover, setDragover] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [project, setProject] = useState('');
   const [tags, setTags] = useState('');
+
+  useEffect(() => {
+    return () => {
+      if (navigateTimerRef.current) clearTimeout(navigateTimerRef.current);
+    };
+  }, []);
 
   const handleFile = useCallback(
     async (file: File) => {
@@ -28,8 +37,8 @@ export default function UploadPage() {
             .map((t) => t.trim())
             .filter(Boolean),
         });
-        setToast(`Report uploaded successfully`);
-        setTimeout(() => navigate(`/reports/${result.id}`), 800);
+        setToast('Report uploaded successfully');
+        navigateTimerRef.current = setTimeout(() => navigate(`/reports/${result.id}`), 800);
       } catch (err) {
         setError(
           err instanceof Error
@@ -48,6 +57,17 @@ export default function UploadPage() {
     setDragover(false);
     const file = e.dataTransfer.files[0];
     if (file) handleFile(file);
+  }
+
+  function openFilePicker() {
+    document.getElementById('file-input')?.click();
+  }
+
+  function onUploadKeyDown(e: React.KeyboardEvent) {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (!uploading) openFilePicker();
+    }
   }
 
   return (
@@ -85,21 +105,29 @@ export default function UploadPage() {
 
       <div
         className={`upload-zone ${dragover ? 'dragover' : ''}`}
+        role="button"
+        tabIndex={0}
+        aria-disabled={uploading}
+        aria-label="Upload Snapline TestRunReport JSON file"
         onDragOver={(e) => {
           e.preventDefault();
           setDragover(true);
         }}
         onDragLeave={() => setDragover(false)}
         onDrop={onDrop}
-        onClick={() => document.getElementById('file-input')?.click()}
+        onClick={() => !uploading && openFilePicker()}
+        onKeyDown={onUploadKeyDown}
       >
         <input
           id="file-input"
           type="file"
           accept=".json,application/json"
+          className="sr-only"
+          disabled={uploading}
           onChange={(e) => {
             const file = e.target.files?.[0];
             if (file) handleFile(file);
+            e.target.value = '';
           }}
         />
         <div className="upload-icon" aria-hidden>
@@ -112,7 +140,11 @@ export default function UploadPage() {
         <p>or click to browse · accepts TestRunReport JSON from Node.js or Python</p>
       </div>
 
-      {error && <div className="error" style={{ marginTop: '1rem' }}>{error}</div>}
+      {error && (
+        <div className="error" role="alert" style={{ marginTop: '1rem' }}>
+          {error}
+        </div>
+      )}
 
       <div className="card" style={{ marginTop: '2rem' }}>
         <div className="card-header">

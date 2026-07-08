@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import type { DiffResult, StoredReport, TestStepResult } from '@shared/types';
 import { deleteReport, fetchReport, searchParamsFromFilters } from '../api';
+import { usePageTitle } from '../hooks/usePageTitle';
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleString();
@@ -43,12 +44,27 @@ function StepItem({ step }: { step: TestStepResult }) {
   );
 }
 
-function SuiteCard({ name, passed, results }: { name: string; passed: boolean; results: TestStepResult[] }) {
+function SuiteCard({
+  suiteKey,
+  name,
+  passed,
+  results,
+}: {
+  suiteKey: string;
+  name: string;
+  passed: boolean;
+  results: TestStepResult[];
+}) {
   const [open, setOpen] = useState(!passed);
 
   return (
     <div className="suite-card">
-      <div className="suite-header" onClick={() => setOpen(!open)}>
+      <button
+        type="button"
+        className="suite-header"
+        onClick={() => setOpen(!open)}
+        aria-expanded={open}
+      >
         <div>
           <div className="suite-name">{name}</div>
           <div className="suite-meta">
@@ -60,11 +76,11 @@ function SuiteCard({ name, passed, results }: { name: string; passed: boolean; r
         <span className={`badge ${passed ? 'pass' : 'fail'}`}>
           {passed ? 'PASSED' : 'FAILED'}
         </span>
-      </div>
+      </button>
       {open && (
         <div className="step-list">
-          {results.map((step) => (
-            <StepItem key={step.step} step={step} />
+          {results.map((step, index) => (
+            <StepItem key={`${suiteKey}-${step.step}-${index}`} step={step} />
           ))}
         </div>
       )}
@@ -81,10 +97,17 @@ export default function ReportDetailPage() {
 
   useEffect(() => {
     if (!id) return;
-    fetchReport(id)
+    const controller = new AbortController();
+    fetchReport(id, controller.signal)
       .then(setReport)
-      .catch((err) => setError(err instanceof Error ? err.message : 'Failed to load report'));
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setError(err instanceof Error ? err.message : 'Failed to load report');
+      });
+    return () => controller.abort();
   }, [id]);
+
+  usePageTitle(report?.label ?? (id ? `Run ${id.slice(0, 8)}` : 'Report'));
 
   async function handleDelete() {
     if (!id || !confirm('Delete this report permanently?')) return;
@@ -99,11 +122,11 @@ export default function ReportDetailPage() {
   }
 
   if (error) {
-    return <div className="error">{error}</div>;
+    return <div className="error" role="alert">{error}</div>;
   }
 
   if (!report) {
-    return <div className="loading">Loading report…</div>;
+    return <div className="loading" role="status" aria-live="polite">Loading report…</div>;
   }
 
   const failedSteps = report.report.suites.flatMap((s) =>
@@ -212,8 +235,8 @@ export default function ReportDetailPage() {
             <h2>Failures ({failedSteps.length})</h2>
           </div>
           <div className="card-body">
-            {failedSteps.map((step) => (
-              <StepItem key={step.step} step={step} />
+            {failedSteps.map((step, index) => (
+              <StepItem key={`fail-${step.step}-${index}`} step={step} />
             ))}
           </div>
         </div>
@@ -221,9 +244,10 @@ export default function ReportDetailPage() {
 
       <h2 style={{ fontSize: '1.1rem', marginBottom: '1rem' }}>Suites</h2>
       <div className="suite-list">
-        {report.report.suites.map((suite) => (
+        {report.report.suites.map((suite, index) => (
           <SuiteCard
-            key={suite.name}
+            key={`${suite.name}-${index}`}
+            suiteKey={`${suite.name}-${index}`}
             name={suite.name}
             passed={suite.passed}
             results={suite.results}

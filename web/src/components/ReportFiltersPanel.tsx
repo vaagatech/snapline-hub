@@ -41,6 +41,7 @@ function activePreset(filters: ReportFilters): QuickPreset | null {
 export default function ReportFiltersPanel({ onChange }: ReportFiltersPanelProps) {
   const [searchParams, setSearchParams] = useSearchParams();
   const [facets, setFacets] = useState<ReportFacets | null>(null);
+  const [facetsError, setFacetsError] = useState<string | null>(null);
   const [advancedOpen, setAdvancedOpen] = useState(false);
   const filters = filtersFromSearchParams(searchParams);
   const [searchInput, setSearchInput] = useState(filters.search ?? '');
@@ -48,16 +49,22 @@ export default function ReportFiltersPanel({ onChange }: ReportFiltersPanelProps
 
   const updateFilters = useCallback(
     (next: ReportFilters) => {
-      setSearchParams(searchParamsFromFilters(next));
-      onChange(next);
+      setSearchParams(searchParamsFromFilters({ ...next, offset: undefined }));
     },
-    [onChange, setSearchParams],
+    [setSearchParams],
   );
 
   useEffect(() => {
-    fetchFacets({ project: filters.project, from: filters.from, to: filters.to })
+    const controller = new AbortController();
+    setFacetsError(null);
+    fetchFacets({ project: filters.project, from: filters.from, to: filters.to }, controller.signal)
       .then(setFacets)
-      .catch(() => setFacets(null));
+      .catch((err) => {
+        if (controller.signal.aborted) return;
+        setFacets(null);
+        setFacetsError(err instanceof Error ? err.message : 'Failed to load filter options');
+      });
+    return () => controller.abort();
   }, [filters.project, filters.from, filters.to]);
 
   useEffect(() => {
@@ -70,17 +77,26 @@ export default function ReportFiltersPanel({ onChange }: ReportFiltersPanelProps
 
   useEffect(() => {
     const trimmed = debouncedSearch.trim();
-    const current = filters.search ?? '';
-    if (trimmed !== current) {
-      updateFilters({ ...filters, search: trimmed || undefined });
-    }
-  }, [debouncedSearch]); // eslint-disable-line react-hooks/exhaustive-deps
+    const urlSearch = searchParams.get('search') ?? '';
+    if (trimmed === urlSearch) return;
+    const next = filtersFromSearchParams(searchParams);
+    if (trimmed) next.search = trimmed;
+    else delete next.search;
+    delete next.offset;
+    setSearchParams(searchParamsFromFilters(next));
+  }, [debouncedSearch, searchParams, setSearchParams]);
 
   useEffect(() => {
     if (hasActiveFilters(filters) && (filters.framework || filters.project || filters.tagMode === 'all')) {
       setAdvancedOpen(true);
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function clearSearch() {
+    setSearchInput('');
+    const next = { ...filters, search: undefined, offset: undefined };
+    setSearchParams(searchParamsFromFilters(next));
+  }
 
   function toggleTag(tag: string) {
     const current = filters.tags ?? [];
@@ -141,7 +157,7 @@ export default function ReportFiltersPanel({ onChange }: ReportFiltersPanelProps
             <button
               type="button"
               className="search-clear"
-              onClick={() => setSearchInput('')}
+              onClick={clearSearch}
               aria-label="Clear search"
             >
               ×
@@ -174,6 +190,12 @@ export default function ReportFiltersPanel({ onChange }: ReportFiltersPanelProps
       </div>
 
       <ActiveFilterChips filters={filters} onUpdate={updateFilters} onClear={clearFilters} />
+
+      {facetsError && (
+        <p className="filters-error" role="status">
+          {facetsError}
+        </p>
+      )}
 
       <div className="filters-advanced">
         <button

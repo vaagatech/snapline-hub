@@ -1,4 +1,4 @@
-import { afterAll, describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import request from 'supertest';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { join } from 'node:path';
@@ -158,5 +158,95 @@ describe('Snapline Hub API', () => {
 
     const detail = await request(app).get(`/api/reports/${id}`);
     expect(detail.status).toBe(404);
+  });
+
+  it('normalizes invalid pagination parameters', async () => {
+    const res = await request(app).get('/api/reports?limit=-5&offset=not-a-number');
+    expect(res.status).toBe(200);
+    expect(res.body.limit).toBe(1);
+    expect(res.body.offset).toBe(0);
+  });
+
+  it('caps pagination limit at 200', async () => {
+    const res = await request(app).get('/api/reports?limit=999');
+    expect(res.status).toBe(200);
+    expect(res.body.limit).toBe(200);
+  });
+
+  it('rejects oversized ingest metadata', async () => {
+    const res = await request(app).post('/api/reports').send({
+      ...sampleReport,
+      label: 'x'.repeat(300),
+    });
+    expect(res.status).toBe(400);
+    expect(res.body.error).toMatch(/label exceeds/);
+  });
+});
+
+describe('Snapline Hub API — stats aggregation', () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'snapline-hub-stats-'));
+  const dbPath = join(tempDir, 'stats.db');
+  const { app, database } = createApp({ dbPath });
+
+  afterAll(() => {
+    database.close();
+    rmSync(tempDir, { recursive: true, force: true });
+  });
+
+  it('aggregates stats across more than 1000 suites via SQL SUM', async () => {
+    for (let i = 0; i < 1005; i++) {
+      database.insertReport({
+        ...sampleReport,
+        generatedAt: `2026-07-07T${String(Math.floor(i / 60)).padStart(2, '0')}:${String(i % 60).padStart(2, '0')}:00.000Z`,
+      });
+    }
+
+    const res = await request(app).get('/api/stats');
+    expect(res.status).toBe(200);
+    expect(res.body.totalRuns).toBe(1005);
+    expect(res.body.totalSuites).toBe(1005);
+  });
+});
+
+describe('Snapline Hub API — API key auth', () => {
+  const tempDir = mkdtempSync(join(tmpdir(), 'snapline-hub-auth-'));
+  const dbPath = join(tempDir, 'auth.db');
+  const originalKey = process.env.HUB_API_KEY;
+  let app: ReturnType<typeof createApp>['app'];
+  let database: ReturnType<typeof createApp>['database'];
+
+  beforeAll(() => {
+    process.env.HUB_API_KEY = 'test-secret-key';
+    const created = createApp({ dbPath });
+    app = created.app;
+    database = created.database;
+  });
+
+  afterAll(() => {
+    database.close();
+    rmSync(tempDir, { recursive: true, force: true });
+    if (originalKey === undefined) {
+      delete process.env.HUB_API_KEY;
+    } else {
+      process.env.HUB_API_KEY = originalKey;
+    }
+  });
+
+  it('rejects POST without API key when HUB_API_KEY is set', async () => {
+    const res = await request(app).post('/api/reports').send(sampleReport);
+    expect(res.status).toBe(401);
+  });
+
+  it('accepts POST with valid API key', async () => {
+    const res = await request(app)
+      .post('/api/reports')
+      .set('X-Hub-Api-Key', 'test-secret-key')
+      .send(sampleReport);
+    expect(res.status).toBe(201);
+  });
+
+  it('allows GET without API key', async () => {
+    const res = await request(app).get('/api/health');
+    expect(res.status).toBe(200);
   });
 });

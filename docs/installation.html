@@ -158,8 +158,34 @@ npm start</code></pre>
             <td><code>./data/snapline-hub.db</code></td>
             <td>Path to the SQLite database file. Parent directories are created automatically.</td>
           </tr>
+          <tr>
+            <td><code>HOST</code></td>
+            <td><code>127.0.0.1</code></td>
+            <td>Network interface to bind. Use <code>0.0.0.0</code> when exposing Hub on a team server or behind a reverse proxy.</td>
+          </tr>
+          <tr>
+            <td><code>HUB_API_KEY</code></td>
+            <td><em>(unset)</em></td>
+            <td>When set, <code>POST /api/reports</code> and <code>DELETE /api/reports/:id</code> require the <code>X-Hub-Api-Key</code> header. GET endpoints remain public.</td>
+          </tr>
+          <tr>
+            <td><code>ALLOWED_ORIGINS</code></td>
+            <td><code>localhost:5173, localhost:3847</code></td>
+            <td>Comma-separated CORS origins for the API. Required when the UI is served from a different host than the defaults.</td>
+          </tr>
         </tbody>
       </table>
+
+      <h3>Example: secured team deployment</h3>
+      <pre><code>HOST=0.0.0.0 PORT=3847 \
+HUB_API_KEY=your-secret-key \
+ALLOWED_ORIGINS=https://hub.yourcompany.com \
+SNAPLINE_HUB_DB=/var/lib/snapline-hub/reports.db \
+npm start</code></pre>
+      <p>Test runners push with the same key:</p>
+      <pre><code>SNAPLINE_HUB_URL=https://hub.yourcompany.com \
+SNAPLINE_HUB_API_KEY=your-secret-key \
+npm test</code></pre>
 
       <h3>Example: custom port and database path</h3>
       <pre><code>PORT=8080 SNAPLINE_HUB_DB=/var/lib/snapline-hub/reports.db npm start</code></pre>
@@ -177,7 +203,7 @@ npm start</code></pre>
 
       <h3>2. Run tests</h3>
       <pre><code>npm test</code></pre>
-      <p>Six API integration tests validate ingest, list, retrieve, stats, delete, and validation.</p>
+      <p>API integration tests validate ingest, list, retrieve, stats aggregation, pagination, API key auth, delete, and validation.</p>
 
       <h3>3. Open the UI</h3>
       <p>After <code>npm run dev</code> or <code>npm start</code>, open the dashboard. An empty state prompts you to upload a report or set <code>SNAPLINE_HUB_URL</code> in your Snapline test runner.</p>

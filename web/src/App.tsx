@@ -8,9 +8,12 @@ import UploadPage from './pages/UploadPage';
 export default function App() {
   return (
     <div className="app-shell">
+      <a href="#main-content" className="skip-link">
+        Skip to main content
+      </a>
       <Sidebar />
 
-      <main className="main">
+      <main id="main-content" className="main" tabIndex={-1}>
         <Routes>
           <Route path="/" element={<DashboardPage />} />
           <Route path="/reports" element={<ReportsPage />} />
