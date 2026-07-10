@@ -1,6 +1,6 @@
 {
   "name": "snapline-hub",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "Optional reporting UI for Snapline test execution results",
   "type": "module",
   "private": true,
@@ -25,7 +25,7 @@
     "publish:packages": "npm run build:packages && npm run build:server && npm run build:api-package && npm run build:ui-package && npm publish -w @vaagatech/snapline-hub-core && npm publish -w @vaagatech/snapline-hub-api && npm publish -w @vaagatech/snapline-hub-ui"
   },
   "dependencies": {
-    "@vaagatech/snapline-hub-core": "0.2.5",
+    "@vaagatech/snapline-hub-core": "0.2.6",
     "better-sqlite3": "^11.9.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",

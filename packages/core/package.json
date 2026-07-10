@@ -1,6 +1,6 @@
 {
   "name": "@vaagatech/snapline-hub-core",
-  "version": "0.2.5",
+  "version": "0.2.6",
   "description": "RBAC, auth config, and shared primitives for Snapline Hub",
   "author": "VaagaTech (https://www.vaagatech.com)",
   "license": "MIT",
