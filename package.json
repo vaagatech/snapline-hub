@@ -22,7 +22,7 @@
     "test": "vitest run --config vitest.config.ts",
     "typecheck": "npm run build:packages && tsc -p tsconfig.server.json --noEmit && tsc -p web/tsconfig.json --noEmit",
     "sync-versions": "node scripts/sync-versions.mjs",
-    "publish:packages": "npm run build:packages && npm run build:api-package && npm run build:ui-package && npm publish -w @vaagatech/snapline-hub-core && npm publish -w @vaagatech/snapline-hub-api && npm publish -w @vaagatech/snapline-hub-ui"
+    "publish:packages": "npm run build:packages && npm run build:server && npm run build:api-package && npm run build:ui-package && npm publish -w @vaagatech/snapline-hub-core && npm publish -w @vaagatech/snapline-hub-api && npm publish -w @vaagatech/snapline-hub-ui"
   },
   "dependencies": {
     "@vaagatech/snapline-hub-core": "0.2.4",
