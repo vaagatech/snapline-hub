@@ -6,9 +6,10 @@
     "outDir": "dist",
     "rootDir": "src",
     "strict": true,
-    "declaration": true,
     "skipLibCheck": true,
-    "esModuleInterop": true
+    "esModuleInterop": true,
+    "declaration": true,
+    "emitDeclarationOnly": true
   },
-  "include": ["src/**/*.ts", "../../server/**/*.ts", "../../shared/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }
